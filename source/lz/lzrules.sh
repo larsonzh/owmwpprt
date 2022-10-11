@@ -212,6 +212,11 @@ get_ipv4_data_file_item_total() {
     echo "${retval}"
 }
 
+get_ipset_total() {
+    local retval="$( ipset -q list "${1}" | grep -Ec '^([0-9]{1,3}[\.]){3}[0-9]{1,3}' )"
+    echo "${retval}"
+}
+
 load_ipsets() {
     local isp_name_0="CTCC          "
     local isp_name_1="CUCC/CNC      "
@@ -223,14 +228,25 @@ load_ipsets() {
     local isp_name_7="Hongkong      "
     local isp_name_8="Macao         "
     local isp_name_9="Taiwan        "
-    local index="0" port="0" isp_name="" isp_num="0"
+    local index="0" port="0" name="" num="0"
     until [ "${index}" -ge "${ISP_TOTAL}" ]
     do
         eval port="\${ISP_${index}_WAN_PORT}"
         eval add_net_address_sets "${PATH_DATA}/\${ISP_DATA_${index}}" "\${ISPIP_SET_${port}}"
-        eval isp_name="\${isp_name_${index}}"
-        eval isp_num="\$( get_ipv4_data_file_item_total ${PATH_DATA}/\${ISP_DATA_${index}} )"
-        echo "$(lzdate)" [$$]: "   ${isp_name}  wan${port}         ${isp_num}"
+        eval name="\${isp_name_${index}}"
+        eval num="\$( get_ipv4_data_file_item_total ${PATH_DATA}/\${ISP_DATA_${index}} )"
+        echo "$(lzdate)" [$$]: "   ${name} wan${port}          ${num}"
+        let index++
+    done
+    echo "$(lzdate)" [$$]: ------------------------------------------
+    index="0"
+    until [ "${index}" -ge "${MAX_WAN_PORT}" ]
+    do
+        eval name="\${ISPIP_SET_${index}}"
+        if [ "$( ipset -q -n list "${name}" )" ]; then
+            num="$( get_ipset_total "${name}" )"
+            echo "$(lzdate)" [$$]: "   wan${index}       ${name}       ${num}"
+        fi
         let index++
     done
     echo "$(lzdate)" [$$]: ------------------------------------------
