@@ -88,7 +88,8 @@ PATH_LZ="${0%/*}"
 PATH_DATA="${PATH_LZ}/data"
 PATH_TMP="${PATH_LZ}/tmp"
 
-# 最大WAN口总数
+# WAN口最大支持数量
+# 每个IPv4 WAN口对应一个国内网段数据集
 MAX_WAN_PORT="8"
 
 # 第一WAN口国内网段数据集名称
@@ -218,27 +219,26 @@ load_ipsets() {
         echo "$(lzdate)" [$$]: "     ${isp_name}     wan${port}"
         let index++
     done
-    echo "$(lzdate)" [$$]: ----------------------------------------
+    echo "$(lzdate)" [$$]: ------------------------------------------
     echo "$(lzdate)" [$$]: All ISP data of the policy route have been loaded.
 }
 
+create_url_list() {
+    rm -f "${PATH_TMP_DATA}/${ISPIP_FILE_URL_LIST}" > /dev/null 2>&1
+    local index="0"
+    until [ "${index}" -ge "${ISP_TOTAL}" ]
+    do
+        eval echo "${UPDATE_ISPIP_DATA_DOWNLOAD_URL}/\${ISP_DATA_${index}}" >> "${PATH_TMP_DATA}/${ISPIP_FILE_URL_LIST}" > /dev/null 2>&1
+        let index++
+    done
+}
+
 update_isp_data() {
+    # 去苍狼山庄（https://ispip.clang.cn/）下载ISP网络运营商CIDR网段数据文件
     echo "$(lzdate)" [$$]: Start to update the ISP IP data files...
     [ ! -d "${PATH_TMP_DATA}" ] && mkdir -p "${PATH_TMP_DATA}" > /dev/null 2>&1
     rm -f "${PATH_TMP_DATA}"/* > /dev/null 2>&1
-    cat > "${PATH_TMP_DATA}/${ISPIP_FILE_URL_LIST}" <<EOF_UPDATE
-https://ispip.clang.cn/chinatelecom_cidr.txt
-https://ispip.clang.cn/unicom_cnc_cidr.txt
-https://ispip.clang.cn/cmcc_cidr.txt
-https://ispip.clang.cn/crtc_cidr.txt
-https://ispip.clang.cn/cernet_cidr.txt
-https://ispip.clang.cn/gwbn_cidr.txt
-https://ispip.clang.cn/othernet_cidr.txt
-https://ispip.clang.cn/hk_cidr.txt
-https://ispip.clang.cn/mo_cidr.txt
-https://ispip.clang.cn/tw_cidr.txt
-EOF_UPDATE
-    # 去苍狼山庄（https://ispip.clang.cn/）下载ISP网络运营商CIDR网段数据文件
+    create_url_list
     local retval="1"
     local retry_count="1"
     local retry_limit="$(( RETRY_NUM + retry_count ))"
@@ -251,8 +251,8 @@ EOF_UPDATE
                 break
             fi
         else
-        if  wget -q -nc -c --timeout=20 --random-wait --user-agent="Mozilla/5.0 (Windows; U; Windows NT 6.1; en-US)" --prefer-family=IPv4 --referer="${UPDATE_ISPIP_DATA_DOWNLOAD_URL}" --load-cookies="${PATH_DATA}/cookies.isp" --keep-session-cookies --no-check-certificate -P "${PATH_TMP_DATA}" -i "${PATH_TMP_DATA}/${ISPIP_FILE_URL_LIST}";
-        then
+            if  wget -q -nc -c --timeout=20 --random-wait --user-agent="Mozilla/5.0 (Windows; U; Windows NT 6.1; en-US)" --prefer-family=IPv4 --referer="${UPDATE_ISPIP_DATA_DOWNLOAD_URL}" --load-cookies="${PATH_DATA}/cookies.isp" --keep-session-cookies --no-check-certificate -P "${PATH_TMP_DATA}" -i "${PATH_TMP_DATA}/${ISPIP_FILE_URL_LIST}";
+            then
                 retval="0"
                 break
             fi
@@ -272,11 +272,10 @@ EOF_UPDATE
     rm -f "${PATH_TMP_DATA}"/* > /dev/null 2>&1
     if [ "${retval}" = "0" ]; then
         echo "$(lzdate)" [$$]: Update the ISP IP data files successfully.
-        echo "$(lzdate)" [$$]: ----------------------------------------
+        echo "$(lzdate)" [$$]: ------------------------------------------
     else
         echo "$(lzdate)" [$$]: Failed to update the ISP IP data files.
     fi
-
     return "${retval}"
 }
 
@@ -301,9 +300,9 @@ command_parsing() {
 echo "$(lzdate)" [$$]:
 echo "$(lzdate)" [$$]: LZ RULES "${LZ_VERSION}" script commands start...
 echo "$(lzdate)" [$$]: By LZ \(larsonzhang@gmail.com\)
-echo "$(lzdate)" [$$]: ----------------------------------------
+echo "$(lzdate)" [$$]: ------------------------------------------
 echo "$(lzdate)" [$$]: Location: "${PATH_LZ}"
-echo "$(lzdate)" [$$]: ----------------------------------------
+echo "$(lzdate)" [$$]: ------------------------------------------
 
 while true
 do
@@ -314,7 +313,7 @@ do
     break
 done
 
-echo "$(lzdate)" [$$]: ----------------------------------------
+echo "$(lzdate)" [$$]: ------------------------------------------
 echo "$(lzdate)" [$$]: LZ RULES "${LZ_VERSION}" script commands executed!
 echo "$(lzdate)" [$$]:
 
