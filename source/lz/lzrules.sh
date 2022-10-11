@@ -236,11 +236,11 @@ load_ipsets() {
         eval name="\${isp_name_${index}}"
         eval num="\$( get_ipv4_data_file_item_total ${PATH_DATA}/\${ISP_DATA_${index}} )"
         echo "$(lzdate)" [$$]: "   ${name} wan${port}          ${num}"
-        logger "[$$]:    ${name} wan${port}          ${num}"
+        logger -p 1 "[$$]:    ${name} wan${port}          ${num}"
         let index++
     done
     echo "$(lzdate)" [$$]: ------------------------------------------
-    logger "[$$]: ------------------------------------------"
+    logger -p 1 "[$$]: ------------------------------------------"
     index="0"
     until [ "${index}" -ge "${MAX_WAN_PORT}" ]
     do
@@ -248,14 +248,14 @@ load_ipsets() {
         if [ "$( ipset -q -n list "${name}" )" ]; then
             num="$( get_ipset_total "${name}" )"
             echo "$(lzdate)" [$$]: "   wan${index}       ${name}       ${num}"
-            logger "[$$]:    wan${index}       ${name}       ${num}"
+            logger -p 1 "[$$]:    wan${index}       ${name}       ${num}"
         fi
         let index++
     done
     echo "$(lzdate)" [$$]: ------------------------------------------
     echo "$(lzdate)" [$$]: All ISP data of the policy route have been loaded.
-    logger "[$$]: ------------------------------------------"
-    logger "[$$]: All ISP data of the policy route have been loaded."
+    logger -p 1 "[$$]: ------------------------------------------"
+    logger -p 1 "[$$]: All ISP data of the policy route have been loaded."
 }
 
 create_url_list() {
@@ -271,7 +271,7 @@ create_url_list() {
 update_isp_data() {
     # 去苍狼山庄（https://ispip.clang.cn/）下载ISP网络运营商CIDR网段数据文件
     echo "$(lzdate)" [$$]: Start to update the ISP IP data files...
-    logger "[$$]: Start to update the ISP IP data files..."
+    logger -p 1 "[$$]: Start to update the ISP IP data files..."
     [ ! -d "${PATH_TMP_DATA}" ] && mkdir -p "${PATH_TMP_DATA}" > /dev/null 2>&1
     rm -f "${PATH_TMP_DATA}"/* > /dev/null 2>&1
     create_url_list
@@ -298,28 +298,28 @@ update_isp_data() {
     done
     if [ "${retval}" = "0" ]; then
         echo "$(lzdate)" [$$]: Download the ISP IP data files successfully.
-        logger "[$$]: Download the ISP IP data files successfully."
+        logger -p 1 "[$$]: Download the ISP IP data files successfully."
         [ ! -d "${PATH_DATA}" ] && mkdir -p "${PATH_DATA}"
         ! mv -f "${PATH_TMP_DATA}"/*"_cidr.txt" "${PATH_DATA}" > /dev/null 2>&1 && retval="1"
         [ "${retval}" != "0" ] && {
             echo "$(lzdate)" [$$]: Failed to copy the ISP IP data files.
-            logger "[$$]: Failed to copy the ISP IP data files."
+            logger -p 1 "[$$]: Failed to copy the ISP IP data files."
         }
     else
         echo "$(lzdate)" [$$]: Failed to download the ISP IP data files.
-        logger "[$$]: Failed to download the ISP IP data files."
+        logger -p 1 "[$$]: Failed to download the ISP IP data files."
     fi
     echo "$(lzdate)" [$$]: Remove the temporary files.
-    logger "[$$]: Remove the temporary files."
+    logger -p 1 "[$$]: Remove the temporary files."
     rm -f "${PATH_TMP_DATA}"/* > /dev/null 2>&1
     if [ "${retval}" = "0" ]; then
         echo "$(lzdate)" [$$]: Update the ISP IP data files successfully.
         echo "$(lzdate)" [$$]: ------------------------------------------
-        logger "[$$]: Update the ISP IP data files successfully."
-        logger "[$$]: ------------------------------------------"
+        logger -p 1 "[$$]: Update the ISP IP data files successfully."
+        logger -p 1 "[$$]: ------------------------------------------"
     else
         echo "$(lzdate)" [$$]: Failed to update the ISP IP data files.
-        logger "[$$]: Failed to update the ISP IP data files."
+        logger -p 1 "[$$]: Failed to update the ISP IP data files."
     fi
     return "${retval}"
 }
@@ -342,11 +342,11 @@ command_parsing() {
     elif [ "${HAMMER}" = "${UNLOAD}" ]; then
         delete_ipsets
         echo "$(lzdate)" [$$]: All ISP data of the policy route have been unloaded.
-        logger "[$$]: All ISP data of the policy route have been unloaded."
+        logger -p 1 "[$$]: All ISP data of the policy route have been unloaded."
         return 1
     fi
     echo "$(lzdate)" [$$]: Oh, you\'re using the wrong command.
-    logger "[$$]: Oh, you're using the wrong command."
+    logger -p 1 "[$$]: Oh, you're using the wrong command."
     return 1
 }
 
@@ -360,12 +360,12 @@ echo "$(lzdate)" [$$]: ------------------------------------------
 echo "$(lzdate)" [$$]: Location: "${PATH_LZ}"
 echo "$(lzdate)" [$$]: ------------------------------------------
 
-logger "[$$]: "
-logger "[$$]: LZ RULES ${LZ_VERSION} script commands start..."
-logger "[$$]: By LZ (larsonzhang@gmail.com)"
-logger "[$$]: ------------------------------------------"
-logger "[$$]: Location: ${PATH_LZ}"
-logger "[$$]: ------------------------------------------"
+logger -p 1 "[$$]: "
+logger -p 1 "[$$]: LZ RULES ${LZ_VERSION} script commands start..."
+logger -p 1 "[$$]: By LZ (larsonzhang@gmail.com)"
+logger -p 1 "[$$]: ------------------------------------------"
+logger -p 1 "[$$]: Location: ${PATH_LZ}"
+logger -p 1 "[$$]: ------------------------------------------"
 
 while true
 do
@@ -381,8 +381,8 @@ echo "$(lzdate)" [$$]: ------------------------------------------
 echo "$(lzdate)" [$$]: LZ RULES "${LZ_VERSION}" script commands executed!
 echo "$(lzdate)" [$$]:
 
-logger "[$$]: ------------------------------------------"
-logger "[$$]: LZ RULES ${LZ_VERSION} script commands executed!"
-logger "[$$]: "
+logger -p 1 "[$$]: ------------------------------------------"
+logger -p 1 "[$$]: LZ RULES ${LZ_VERSION} script commands executed!"
+logger -p 1 "[$$]: "
 
 # END
