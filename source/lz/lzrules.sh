@@ -199,6 +199,19 @@ add_net_address_sets() {
     awk '{print $0} END{print "COMMIT"}' | ipset restore > /dev/null 2>&1
 }
 
+get_ipv4_data_file_item_total() {
+    local retval="0"
+    [ -f "${1}" ] && {
+        retval="$( sed -e 's/\(^[^#]*\)[#].*$/\1/g' -e '/^$/d' -e 's/LZ/  /g' \
+        -e 's/\(\([0-9]\{1,3\}[\.]\)\{3\}[0-9]\{1,3\}\([\/][0-9]\{1,2\}\)\{0,1\}\)/LZ\1LZ/g' \
+        -e 's/^.*\(LZ\([0-9]\{1,3\}[\.]\)\{3\}[0-9]\{1,3\}\([\/][0-9]\{1,2\}\)\{0,1\}LZ\).*$/\1/g' \
+        -e '/^[^L][^Z]/d' -e '/[^L][^Z]$/d' -e '/^.\{0,10\}$/d' \
+        -e '/[3-9][0-9][0-9]/d' -e '/[2][6-9][0-9]/d' -e '/[2][5][6-9]/d' -e '/[\/][4-9][0-9]/d' \
+        -e '/[\/][3][3-9]/d' "${1}" | grep -c '^[L][Z].*[L][Z]$' )"
+    }
+    echo "${retval}"
+}
+
 load_ipsets() {
     local isp_name_0="CTCC          "
     local isp_name_1="CUCC/CNC      "
@@ -210,13 +223,14 @@ load_ipsets() {
     local isp_name_7="Hongkong      "
     local isp_name_8="Macao         "
     local isp_name_9="Taiwan        "
-    local index="0" port="0" isp_name=
+    local index="0" port="0" isp_name="" isp_num="0"
     until [ "${index}" -ge "${ISP_TOTAL}" ]
     do
-        eval "port=\${ISP_${index}_WAN_PORT}"
+        eval port="\${ISP_${index}_WAN_PORT}"
         eval add_net_address_sets "${PATH_DATA}/\${ISP_DATA_${index}}" "\${ISPIP_SET_${port}}"
-        eval "isp_name=\${isp_name_${index}}"
-        echo "$(lzdate)" [$$]: "     ${isp_name}     wan${port}"
+        eval isp_name="\${isp_name_${index}}"
+        eval isp_num="\$( get_ipv4_data_file_item_total ${PATH_DATA}/\${ISP_DATA_${index}} )"
+        echo "$(lzdate)" [$$]: "   ${isp_name}  wan${port}         ${isp_num}"
         let index++
     done
     echo "$(lzdate)" [$$]: ------------------------------------------
