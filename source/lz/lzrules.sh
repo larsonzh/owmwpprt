@@ -9,7 +9,7 @@
 # 更新数据文件         ./lzrules.sh update
 # 卸载运行数据         ./lzrules.sh unload
 
-# 国内ISP网络运营商CIDR网段数据规则加载脚本
+# OpenWrt多WAN口策略路由分流脚本
 
 # BEIGIN
 
