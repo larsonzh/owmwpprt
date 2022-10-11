@@ -329,7 +329,6 @@ command_parsing() {
         echo "$(lzdate)" [$$]: All ISP data of the policy route have been unloaded.
         return 1
     fi
-    HAMMER="error"
     echo "$(lzdate)" [$$]: Oh, you\'re using the wrong command.
     return 1
 }
