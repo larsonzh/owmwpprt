@@ -279,6 +279,16 @@ update_isp_data() {
     return "${retval}"
 }
 
+check_isp_data() {
+    local index="0"
+    until [ "${index}" -ge "${ISP_TOTAL}" ]
+    do
+        eval [ ! -f "${PATH_DATA}/\${ISP_DATA_${index}}" ] && return 1
+        let index++
+    done
+    return 0
+}
+
 command_parsing() {
     [ "${PARAM_TOTAL}" = "0" ] && return 0
     if [ "${HAMMER}" = "${UPDATE}" ]; then
@@ -307,6 +317,7 @@ echo "$(lzdate)" [$$]: ------------------------------------------
 while true
 do
     command_parsing || break
+    ! check_isp_data && { ! update_isp_data && break; }
     cleaning_user_data
     delete_ipsets
     load_ipsets
