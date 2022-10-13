@@ -174,6 +174,18 @@ delete_ipsets() {
     done
 }
 
+create_ipsets() {
+    local port="0"
+    until [ "${port}" -ge "${MAX_WAN_PORT}" ]
+    do
+        if eval grep -q "\${ISPIP_SET_${port}}" /etc/config/mwan3 2> /dev/null; then
+            eval ipset -q create "\${ISPIP_SET_${port}}" nethash #--hashsize 65535
+            eval ipset -q flush "\${ISPIP_SET_${port}}"
+        fi
+        let port++
+    done
+}
+
 add_net_address_sets() {
     if [ ! -f "${1}" ] || [ -z "${2}" ]; then return; fi;
     ipset -q create "${2}" nethash #--hashsize 65535
@@ -217,17 +229,48 @@ get_ipset_total() {
     echo "${retval}"
 }
 
+print_wan_ispip_item_num() {
+    echo "$(lzdate)" [$$]: ---------------------------------------------
+    logger -p 1 "[$$]: ---------------------------------------------"
+    local index="0" name="" num="0"
+    until [ "${index}" -ge "${MAX_WAN_PORT}" ]
+    do
+        eval name="\${ISPIP_SET_${index}}"
+        if [ "$( ipset -q -n list "${name}" )" ]; then
+            num="$( get_ipset_total "${name}" )"
+            printf "%s %-12s %-13s\t%s\n" "$(lzdate) [$$]:  " "wan${index}" "${name}" "${num}" 
+            logger -p 1 "$( printf "%s %-6s\t%-13s%s\n" "[$$]:  " "wan${index}" "${name}" "${num}" )"
+        fi
+        let index++
+    done
+}
+
+print_wan_ip() {
+    local ifn="$( ip route show | awk '$1 ~ /default/ {print $5}' )" strbuf=""
+    if [ -n "${ifn}" ]; then
+        echo "$(lzdate)" [$$]: ---------------------------------------------
+        logger -p 1 "[$$]: ---------------------------------------------"
+        for ifn in ${ifn}
+        do
+            strbuf="$( ip route show | awk '$1 ~ /default/ && $5 ~ "'"${ifn}"'" {print $5,$9,system("curl -s --connect-timeout 20 --interface "$9" -w n whatismyip.akamai.com 2> /dev/null")}' \
+                | awk -F 'n' '{print $1}' | awk '{printf "%s\t%-15s\t%s\n",$1,$2,$3}' )"
+            echo "$(lzdate) [$$]:   ${strbuf}"
+            logger -p 1 "[$$]:   ${strbuf}"
+        done
+    fi
+}
+
 load_ipsets() {
-    local isp_name_0="CTCC          "
-    local isp_name_1="CUCC/CNC      "
-    local isp_name_2="CMCC          "
-    local isp_name_3="CRTC          "
-    local isp_name_4="CERNET        "
-    local isp_name_5="GWBN          "
-    local isp_name_6="Other         "
-    local isp_name_7="Hongkong      "
-    local isp_name_8="Macao         "
-    local isp_name_9="Taiwan        "
+    local isp_name_0="CTCC"
+    local isp_name_1="CUCC/CNC"
+    local isp_name_2="CMCC"
+    local isp_name_3="CRTC"
+    local isp_name_4="CERNET"
+    local isp_name_5="GWBN"
+    local isp_name_6="Other"
+    local isp_name_7="Hongkong"
+    local isp_name_8="Macao"
+    local isp_name_9="Taiwan"
     local index="0" port="0" name="" num="0"
     until [ "${index}" -ge "${ISP_TOTAL}" ]
     do
@@ -235,26 +278,15 @@ load_ipsets() {
         eval add_net_address_sets "${PATH_DATA}/\${ISP_DATA_${index}}" "\${ISPIP_SET_${port}}"
         eval name="\${isp_name_${index}}"
         eval num="\$( get_ipv4_data_file_item_total ${PATH_DATA}/\${ISP_DATA_${index}} )"
-        echo "$(lzdate)" [$$]: "   ${name} wan${port}          ${num}"
-        logger -p 1 "[$$]:    ${name} wan${port}          ${num}"
+        printf "%s %-11s\t%-6s\t\t%s\n" "$(lzdate) [$$]:  " "${name}" "wan${port}" "${num}" 
+        logger -p 1 "$( printf "%s %-11s\t%-6s\t%s\n" "[$$]:  " "${name}" "wan${port}" "${num}" )"
         let index++
     done
-    echo "$(lzdate)" [$$]: ------------------------------------------
-    logger -p 1 "[$$]: ------------------------------------------"
-    index="0"
-    until [ "${index}" -ge "${MAX_WAN_PORT}" ]
-    do
-        eval name="\${ISPIP_SET_${index}}"
-        if [ "$( ipset -q -n list "${name}" )" ]; then
-            num="$( get_ipset_total "${name}" )"
-            echo "$(lzdate)" [$$]: "   wan${index}       ${name}       ${num}"
-            logger -p 1 "[$$]:    wan${index}       ${name}       ${num}"
-        fi
-        let index++
-    done
-    echo "$(lzdate)" [$$]: ------------------------------------------
+    print_wan_ispip_item_num
+    print_wan_ip
+    echo "$(lzdate)" [$$]: ---------------------------------------------
     echo "$(lzdate)" [$$]: All ISP data of the policy route have been loaded.
-    logger -p 1 "[$$]: ------------------------------------------"
+    logger -p 1 "[$$]: ---------------------------------------------"
     logger -p 1 "[$$]: All ISP data of the policy route have been loaded."
 }
 
@@ -314,9 +346,9 @@ update_isp_data() {
     rm -f "${PATH_TMP_DATA}"/* > /dev/null 2>&1
     if [ "${retval}" = "0" ]; then
         echo "$(lzdate)" [$$]: Update the ISP IP data files successfully.
-        echo "$(lzdate)" [$$]: ------------------------------------------
+        echo "$(lzdate)" [$$]: ---------------------------------------------
         logger -p 1 "[$$]: Update the ISP IP data files successfully."
-        logger -p 1 "[$$]: ------------------------------------------"
+        logger -p 1 "[$$]: ---------------------------------------------"
     else
         echo "$(lzdate)" [$$]: Failed to update the ISP IP data files.
         logger -p 1 "[$$]: Failed to update the ISP IP data files."
@@ -356,16 +388,16 @@ command_parsing() {
 echo "$(lzdate)" [$$]:
 echo "$(lzdate)" [$$]: LZ RULES "${LZ_VERSION}" script commands start...
 echo "$(lzdate)" [$$]: By LZ \(larsonzhang@gmail.com\)
-echo "$(lzdate)" [$$]: ------------------------------------------
+echo "$(lzdate)" [$$]: ---------------------------------------------
 echo "$(lzdate)" [$$]: Location: "${PATH_LZ}"
-echo "$(lzdate)" [$$]: ------------------------------------------
+echo "$(lzdate)" [$$]: ---------------------------------------------
 
 logger -p 1 "[$$]: "
 logger -p 1 "[$$]: LZ RULES ${LZ_VERSION} script commands start..."
 logger -p 1 "[$$]: By LZ (larsonzhang@gmail.com)"
-logger -p 1 "[$$]: ------------------------------------------"
+logger -p 1 "[$$]: ---------------------------------------------"
 logger -p 1 "[$$]: Location: ${PATH_LZ}"
-logger -p 1 "[$$]: ------------------------------------------"
+logger -p 1 "[$$]: ---------------------------------------------"
 
 while true
 do
@@ -373,15 +405,16 @@ do
     ! check_isp_data && { ! update_isp_data && break; }
     cleaning_user_data
     delete_ipsets
+    create_ipsets
     load_ipsets
     break
 done
 
-echo "$(lzdate)" [$$]: ------------------------------------------
+echo "$(lzdate)" [$$]: ---------------------------------------------
 echo "$(lzdate)" [$$]: LZ RULES "${LZ_VERSION}" script commands executed!
 echo "$(lzdate)" [$$]:
 
-logger -p 1 "[$$]: ------------------------------------------"
+logger -p 1 "[$$]: ---------------------------------------------"
 logger -p 1 "[$$]: LZ RULES ${LZ_VERSION} script commands executed!"
 logger -p 1 "[$$]: "
 
