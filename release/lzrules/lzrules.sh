@@ -125,6 +125,15 @@ ISP_DATA_9="tw_cidr.txt"
 # 版本号
 LZ_VERSION=v1.0.0
 
+# 项目标识
+PROJECT_ID="lzrules"
+
+# 项目文件名
+PROJECT_FILENAME="${PROJECT_ID}.sh"
+
+# 项目自启动文件名
+BOOT_FILENAME="lzboot.sh"
+
 # 项目文件路径
 PATH_LZ="${0%/*}"
 [ "${PATH_LZ:0:1}" != '/' ] && PATH_LZ="$( pwd )${PATH_LZ#*.}"
@@ -378,12 +387,42 @@ check_isp_data() {
     return 0
 }
 
+register_interface() {
+    cat > "${PATH_LZ}/${BOOT_FILENAME}" 2> /dev/null <<EOF_BOOT
+#!/bin/sh
+${PATH_LZ}/${PROJECT_FILENAME} update
+
+EOF_BOOT
+    chmod +x "${PATH_LZ}/${BOOT_FILENAME}" > /dev/null 2>&1
+    if ! grep -q "${PATH_LZ}/${BOOT_FILENAME}" "${BOOT_START_FILENAME}" 2> /dev/null; then
+        echo "${PATH_LZ}/${BOOT_FILENAME}"
+        sed -i "/${BOOT_FILENAME}/d" "${BOOT_START_FILENAME}" > /dev/null 2>&1
+        eval sed -i "1i ${PATH_LZ}/${BOOT_FILENAME} # Added by LZ" "${BOOT_START_FILENAME}"
+        echo "${PATH_LZ}/${BOOT_FILENAME}"
+    fi
+    if ! grep -q "15 1 \*/3 \* \* /bin/sh ${PATH_LZ}/${BOOT_FILENAME}" "${CRONTABS_ROOT_FILENAME}" 2> /dev/null; then
+        sed -i "/${BOOT_FILENAME}/d" "${BOOT_START_FILENAME}" > /dev/null 2>&1
+        eval sed -i "\$a 15 1 \*/3 \* \* /bin/sh ${PATH_LZ}/${BOOT_FILENAME} > /dev/null 2>&1 # Added by LZ" "${CRONTABS_ROOT_FILENAME}" > /dev/null 2>&1
+    fi
+}
+
+unregister_interface() {
+    if grep -q "${BOOT_FILENAME}" "${BOOT_START_FILENAME}" 2> /dev/null; then
+        sed -i "/${BOOT_FILENAME}/d" "${BOOT_START_FILENAME}" > /dev/null 2>&1
+    fi
+    if grep -q "${BOOT_FILENAME}" "${CRONTABS_ROOT_FILENAME}" 2> /dev/null; then
+        sed -i "/${BOOT_FILENAME}/d" "${CRONTABS_ROOT_FILENAME}" > /dev/null 2>&1
+    fi
+    rm -f "${PATH_LZ}/${BOOT_FILENAME}" > /dev/null 2>&1
+}
+
 command_parsing() {
     [ "${PARAM_TOTAL}" = "0" ] && return 0
     if [ "${HAMMER}" = "${UPDATE}" ]; then
         update_isp_data && return 0
         return 1
     elif [ "${HAMMER}" = "${UNLOAD}" ]; then
+        unregister_interface
         delete_ipsets
         echo "$(lzdate)" [$$]: All ISP data of the policy route have been unloaded.
         logger -p 1 "[$$]: All ISP data of the policy route have been unloaded."
@@ -419,6 +458,7 @@ do
     delete_ipsets
     create_ipsets
     load_ipsets
+    register_interface
     break
 done
 
