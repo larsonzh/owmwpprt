@@ -79,9 +79,6 @@ RETRY_NUM=5
 
 # ---------------------全局变量---------------------
 
-# 版本号
-LZ_VERSION=v1.0.0
-
 # WAN口最大支持数量
 # 每个IPv4 WAN口对应一个国内网段数据集
 MAX_WAN_PORT="8"
@@ -124,6 +121,9 @@ ISP_DATA_6="othernet_cidr.txt"
 ISP_DATA_7="hk_cidr.txt"
 ISP_DATA_8="mo_cidr.txt"
 ISP_DATA_9="tw_cidr.txt"
+
+# 版本号
+LZ_VERSION=v1.0.0
 
 # 项目文件路径
 PATH_LZ="${0%/*}"
