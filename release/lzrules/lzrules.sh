@@ -82,12 +82,6 @@ RETRY_NUM=5
 # 版本号
 LZ_VERSION=v1.0.0
 
-# 项目文件路径
-PATH_LZ="${0%/*}"
-[ "${PATH_LZ:0:1}" != '/' ] && PATH_LZ="$( pwd )${PATH_LZ#*.}"
-PATH_DATA="${PATH_LZ}/data"
-PATH_TMP="${PATH_LZ}/tmp"
-
 # WAN口最大支持数量
 # 每个IPv4 WAN口对应一个国内网段数据集
 MAX_WAN_PORT="8"
@@ -131,6 +125,24 @@ ISP_DATA_7="hk_cidr.txt"
 ISP_DATA_8="mo_cidr.txt"
 ISP_DATA_9="tw_cidr.txt"
 
+# 项目文件路径
+PATH_LZ="${0%/*}"
+[ "${PATH_LZ:0:1}" != '/' ] && PATH_LZ="$( pwd )${PATH_LZ#*.}"
+PATH_DATA="${PATH_LZ}/data"
+PATH_TMP="${PATH_LZ}/tmp"
+
+# 系统启动引导配置文件名
+BOOT_START_FILENAME="/etc/rc.local"
+
+# 系统计划任务配置文件名
+CRONTABS_ROOT_FILENAME="/etc/crontabs/root"
+
+# mwan3配置文件名
+MWAN3_FILENAME="/etc/config/mwan3"
+
+# mwan3事件通告文件名
+MWAN3_NOTIFY_FILENAME="/etc/mwan3.user"
+
 # 更新ISP网络运营商CIDR网段数据文件临时下载目录
 PATH_TMP_DATA="${PATH_TMP}/download"
 
@@ -140,7 +152,7 @@ UPDATE_ISPIP_DATA_DOWNLOAD_URL="https://ispip.clang.cn"
 # ISP网络运营商CIDR网段数据文件URL列表文件名
 ISPIP_FILE_URL_LIST="ispip_file_url_list.lst"
 
-# 脚本命令
+# 脚本操作命令
 HAMMER="$( echo "${1}" | tr '[:A-Z:]' '[:a-z:]' )"
 UPDATE="update"
 UNLOAD="unload"
@@ -178,7 +190,7 @@ create_ipsets() {
     local port="0"
     until [ "${port}" -ge "${MAX_WAN_PORT}" ]
     do
-        if eval grep -q "\${ISPIP_SET_${port}}" /etc/config/mwan3 2> /dev/null; then
+        if [ -f "${MWAN3_FILENAME}" ] && eval grep -q "\${ISPIP_SET_${port}}" "${MWAN3_FILENAME}" 2> /dev/null; then
             eval ipset -q create "\${ISPIP_SET_${port}}" nethash #--hashsize 65535
             eval ipset -q flush "\${ISPIP_SET_${port}}"
         fi
