@@ -390,7 +390,7 @@ check_isp_data() {
 register_interface() {
     if ! grep -q "${PATH_LZ}/${PROJECT_FILENAME}" "${BOOT_START_FILENAME}" 2> /dev/null; then
         sed -i "/${PROJECT_ID}/d" "${BOOT_START_FILENAME}" > /dev/null 2>&1
-        sed -i "1i ${PATH_LZ}/${PROJECT_FILENAME} update # Added by LZ" "${BOOT_START_FILENAME}" > /dev/null 2>&1
+        sed -i "1i /bin/sh ${PATH_LZ}/${PROJECT_FILENAME} update # Added by LZ" "${BOOT_START_FILENAME}" > /dev/null 2>&1
     fi
     if ! grep -q "15 1 \*/3 \* \* /bin/sh ${PATH_LZ}/${PROJECT_FILENAME}" "${CRONTABS_ROOT_FILENAME}" 2> /dev/null; then
         sed -i "/${PROJECT_ID}/d" "${CRONTABS_ROOT_FILENAME}" > /dev/null 2>&1
