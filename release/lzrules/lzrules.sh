@@ -161,6 +161,9 @@ UPDATE_ISPIP_DATA_DOWNLOAD_URL="https://ispip.clang.cn"
 # ISP网络运营商CIDR网段数据文件URL列表文件名
 ISPIP_FILE_URL_LIST="ispip_file_url_list.lst"
 
+# 公网IPv4地址查询网站域名
+PIPDN="whatismyip.akamai.com"
+
 # 脚本操作命令
 HAMMER="$( echo "${1}" | tr '[:A-Z:]' '[:a-z:]' )"
 UPDATE="update"
@@ -269,20 +272,27 @@ print_wan_ispip_item_num() {
 }
 
 print_wan_ip() {
-    local ifn="$( ip route show | awk '$1 ~ /default/ {print $5}' )"
-    if [ -n "${ifn}" ]; then
-        local strbuf=""
-        echo "$(lzdate) ${MY_LINE}"
-        logger -p 1 "${MY_LINE}"
-        for ifn in ${ifn}
-        do
-            strbuf="$( ip route show \
-                | awk '$1 ~ /default/ && $5 ~ "'"${ifn}"'" {ifx=$9; if (ifx=="") ifx=$5; print $5,$9,system("curl -s --connect-timeout 20 --interface "ifx" -w n whatismyip.akamai.com 2> /dev/null")}' \
-                | awk -Fn '{print $1}' | awk '{printf "%s\t%-15s\t%s\n","'"[$$]:   "'"$1,$2,$3}' )"
-            echo "$(lzdate) ${strbuf}"
-            logger -p 1 "${strbuf}"
-        done
-    fi
+    local ifn="$( ip route show default 2> /dev/null | awk '{if ($5 != "") print $5}' )"
+    [ -z "${ifn}" ] && return
+    echo "$(lzdate) ${MY_LINE}"
+    logger -p 1 "${MY_LINE}"
+    for ifn in ${ifn}
+    do
+        ip -4 -o address show dev "${ifn}" 2> /dev/null \
+            | awk '{
+                ifa=$4
+                if (ifa == "") ifa=$2
+                psn=index(ifa, "/")
+                if (psn != 0) ifa=substr(ifa, 1, psn-1)
+                print $2,ifa,system("curl -s --connect-timeout 20 --interface "ifa" -w n ""'"${PIPDN}"'"" 2> /dev/null")
+            }' \
+            | awk -Fn '{print $1}' \
+            | awk '{
+                strbuf=sprintf("%s\t%-15s\t%s","'"[$$]:   "'"$1,$2,$3)
+                printf("%s %s\n","'"$(lzdate)"'",strbuf)
+                system("logger -p 1 "strbuf)
+            }'
+    done
 }
 
 load_ipsets() {
