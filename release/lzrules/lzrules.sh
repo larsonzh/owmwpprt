@@ -403,24 +403,27 @@ check_isp_data() {
     return 0
 }
 
-register_interface() {
-    if ! grep -q "${PATH_LZ}/${PROJECT_FILENAME}" "${BOOT_START_FILENAME}" 2> /dev/null; then
-        sed -i "/${PROJECT_ID}/d" "${BOOT_START_FILENAME}" > /dev/null 2>&1
-        sed -i "1i /bin/sh ${PATH_LZ}/${PROJECT_FILENAME} update # Added by LZ" "${BOOT_START_FILENAME}" > /dev/null 2>&1
-    fi
+load_system_boot() {
+    grep -q "${PATH_LZ}/${PROJECT_FILENAME}" "${BOOT_START_FILENAME}" 2> /dev/null && return
+    sed -i "/${PROJECT_ID}/d" "${BOOT_START_FILENAME}" > /dev/null 2>&1
+    sed -i "1i /bin/sh ${PATH_LZ}/${PROJECT_FILENAME} update # Added by LZ" "${BOOT_START_FILENAME}" > /dev/null 2>&1
+}
+
+unload_system_boot() {
+    ! grep -q "${PROJECT_ID}" "${BOOT_START_FILENAME}" 2> /dev/null && return
+    sed -i "/${PROJECT_ID}/d" "${BOOT_START_FILENAME}" > /dev/null 2>&1
+}
+
+load_update_task() {
     if ! grep -q "15 1 \*/3 \* \* /bin/sh ${PATH_LZ}/${PROJECT_FILENAME}" "${CRONTABS_ROOT_FILENAME}" 2> /dev/null; then
         sed -i "/${PROJECT_ID}/d" "${CRONTABS_ROOT_FILENAME}" > /dev/null 2>&1
         sed -i "\$a 15 1 \*/3 \* \* /bin/sh ${PATH_LZ}/${PROJECT_FILENAME} update > /dev/null 2>&1 # Added by LZ" "${CRONTABS_ROOT_FILENAME}" > /dev/null 2>&1
     fi
 }
 
-unregister_interface() {
-    if grep -q "${PROJECT_ID}" "${BOOT_START_FILENAME}" 2> /dev/null; then
-        sed -i "/${PROJECT_ID}/d" "${BOOT_START_FILENAME}" > /dev/null 2>&1
-    fi
-    if grep -q "${PROJECT_ID}" "${CRONTABS_ROOT_FILENAME}" 2> /dev/null; then
-        sed -i "/${PROJECT_ID}/d" "${CRONTABS_ROOT_FILENAME}" > /dev/null 2>&1
-    fi
+unload_update_task() {
+    ! grep -q "${PROJECT_ID}" "${CRONTABS_ROOT_FILENAME}" 2> /dev/null && return
+    sed -i "/${PROJECT_ID}/d" "${CRONTABS_ROOT_FILENAME}" > /dev/null 2>&1
 }
 
 command_parsing() {
@@ -429,7 +432,8 @@ command_parsing() {
         update_isp_data && return 0
         return 1
     elif [ "${HAMMER}" = "${UNLOAD}" ]; then
-        unregister_interface
+        unload_update_task
+        unload_system_boot
         delete_ipsets
         echo "$(lzdate)" [$$]: All ISP data of the policy route have been unloaded.
         logger -p 1 "[$$]: All ISP data of the policy route have been unloaded."
@@ -479,7 +483,8 @@ do
     delete_ipsets
     create_ipsets
     load_ipsets
-    register_interface
+    load_update_task
+    load_system_boot
     break
 done
 
