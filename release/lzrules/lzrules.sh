@@ -122,6 +122,18 @@ ISP_DATA_7="hk_cidr.txt"
 ISP_DATA_8="mo_cidr.txt"
 ISP_DATA_9="tw_cidr.txt"
 
+# 国内ISP网络运营商名称
+ISP_NAME_0="CTCC"
+ISP_NAME_1="CUCC/CNC"
+ISP_NAME_2="CMCC"
+ISP_NAME_3="CRTC"
+ISP_NAME_4="CERNET"
+ISP_NAME_5="GWBN"
+ISP_NAME_6="Other"
+ISP_NAME_7="Hongkong"
+ISP_NAME_8="Macao"
+ISP_NAME_9="Taiwan"
+
 # 版本号
 LZ_VERSION=v1.0.0
 
@@ -296,22 +308,12 @@ print_wan_ip() {
 }
 
 load_ipsets() {
-    local isp_name_0="CTCC"
-    local isp_name_1="CUCC/CNC"
-    local isp_name_2="CMCC"
-    local isp_name_3="CRTC"
-    local isp_name_4="CERNET"
-    local isp_name_5="GWBN"
-    local isp_name_6="Other"
-    local isp_name_7="Hongkong"
-    local isp_name_8="Macao"
-    local isp_name_9="Taiwan"
     local index="0" port="0" name="" num="0"
     until [ "${index}" -ge "${ISP_TOTAL}" ]
     do
         eval port="\${ISP_${index}_WAN_PORT}"
         eval add_net_address_sets "${PATH_DATA}/\${ISP_DATA_${index}}" "\${ISPIP_SET_${port}}"
-        eval name="\${isp_name_${index}}"
+        eval name="\${ISP_NAME_${index}}"
         eval num="\$( get_ipv4_data_file_item_total ${PATH_DATA}/\${ISP_DATA_${index}} )"
         printf "%s %-11s\t%-6s\t\t%s\n" "$(lzdate) [$$]:  " "${name}" "wan${port}" "${num}" 
         logger -p 1 "$( printf "%s %-11s\t%-6s\t%s\n" "[$$]:  " "${name}" "wan${port}" "${num}" )"
