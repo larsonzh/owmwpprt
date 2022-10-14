@@ -167,6 +167,8 @@ UPDATE="update"
 UNLOAD="unload"
 PARAM_TOTAL="${#}"
 
+MY_LINE="[$$]: ---------------------------------------------"
+
 
 # ---------------------函数定义---------------------
 
@@ -251,8 +253,8 @@ get_ipset_total() {
 }
 
 print_wan_ispip_item_num() {
-    echo "$(lzdate)" [$$]: ---------------------------------------------
-    logger -p 1 "[$$]: ---------------------------------------------"
+    echo "$(lzdate) ${MY_LINE}"
+    logger -p 1 "${MY_LINE}"
     local index="0" name="" num="0"
     until [ "${index}" -ge "${MAX_WAN_PORT}" ]
     do
@@ -267,10 +269,11 @@ print_wan_ispip_item_num() {
 }
 
 print_wan_ip() {
-    local ifn="$( ip route show | awk '$1 ~ /default/ {print $5}' )" strbuf="[$$]: ---------------------------------------------"
+    local ifn="$( ip route show | awk '$1 ~ /default/ {print $5}' )"
     if [ -n "${ifn}" ]; then
-        echo "$(lzdate) ${strbuf}"
-        logger -p 1 "${strbuf}"
+        local strbuf=""
+        echo "$(lzdate) ${MY_LINE}"
+        logger -p 1 "${MY_LINE}"
         for ifn in ${ifn}
         do
             strbuf="$( ip route show \
@@ -306,9 +309,9 @@ load_ipsets() {
     done
     print_wan_ispip_item_num
     print_wan_ip
-    echo "$(lzdate)" [$$]: ---------------------------------------------
+    echo "$(lzdate) ${MY_LINE}"
     echo "$(lzdate)" [$$]: All ISP data of the policy route have been loaded.
-    logger -p 1 "[$$]: ---------------------------------------------"
+    logger -p 1 "${MY_LINE}"
     logger -p 1 "[$$]: All ISP data of the policy route have been loaded."
 }
 
@@ -368,9 +371,9 @@ update_isp_data() {
     rm -f "${PATH_TMP_DATA}"/* > /dev/null 2>&1
     if [ "${retval}" = "0" ]; then
         echo "$(lzdate)" [$$]: Update the ISP IP data files successfully.
-        echo "$(lzdate)" [$$]: ---------------------------------------------
+        echo "$(lzdate) ${MY_LINE}"
         logger -p 1 "[$$]: Update the ISP IP data files successfully."
-        logger -p 1 "[$$]: ---------------------------------------------"
+        logger -p 1 "${MY_LINE}"
     else
         echo "$(lzdate)" [$$]: Failed to update the ISP IP data files.
         logger -p 1 "[$$]: Failed to update the ISP IP data files."
@@ -425,22 +428,36 @@ command_parsing() {
     return 1
 }
 
+print_header_info() {
+    echo "$(lzdate)" [$$]:
+    echo "$(lzdate)" [$$]: LZ RULES "${LZ_VERSION}" script commands start...
+    echo "$(lzdate)" [$$]: By LZ \(larsonzhang@gmail.com\)
+    echo "$(lzdate) ${MY_LINE}"
+    echo "$(lzdate)" [$$]: Location: "${PATH_LZ}"
+    echo "$(lzdate) ${MY_LINE}"
+
+    logger -p 1 "[$$]: "
+    logger -p 1 "[$$]: LZ RULES ${LZ_VERSION} script commands start..."
+    logger -p 1 "[$$]: By LZ (larsonzhang@gmail.com)"
+    logger -p 1 "${MY_LINE}"
+    logger -p 1 "[$$]: Location: ${PATH_LZ}"
+    logger -p 1 "${MY_LINE}"
+}
+
+print_tail_info() {
+    echo "$(lzdate) ${MY_LINE}"
+    echo "$(lzdate)" [$$]: LZ RULES "${LZ_VERSION}" script commands executed!
+    echo "$(lzdate)" [$$]:
+
+    logger -p 1 "${MY_LINE}"
+    logger -p 1 "[$$]: LZ RULES ${LZ_VERSION} script commands executed!"
+    logger -p 1 "[$$]: "
+}
+
 
 # ---------------------执行代码---------------------
 
-echo "$(lzdate)" [$$]:
-echo "$(lzdate)" [$$]: LZ RULES "${LZ_VERSION}" script commands start...
-echo "$(lzdate)" [$$]: By LZ \(larsonzhang@gmail.com\)
-echo "$(lzdate)" [$$]: ---------------------------------------------
-echo "$(lzdate)" [$$]: Location: "${PATH_LZ}"
-echo "$(lzdate)" [$$]: ---------------------------------------------
-
-logger -p 1 "[$$]: "
-logger -p 1 "[$$]: LZ RULES ${LZ_VERSION} script commands start..."
-logger -p 1 "[$$]: By LZ (larsonzhang@gmail.com)"
-logger -p 1 "[$$]: ---------------------------------------------"
-logger -p 1 "[$$]: Location: ${PATH_LZ}"
-logger -p 1 "[$$]: ---------------------------------------------"
+print_header_info
 
 while true
 do
@@ -454,12 +471,6 @@ do
     break
 done
 
-echo "$(lzdate)" [$$]: ---------------------------------------------
-echo "$(lzdate)" [$$]: LZ RULES "${LZ_VERSION}" script commands executed!
-echo "$(lzdate)" [$$]:
-
-logger -p 1 "[$$]: ---------------------------------------------"
-logger -p 1 "[$$]: LZ RULES ${LZ_VERSION} script commands executed!"
-logger -p 1 "[$$]: "
+print_tail_info
 
 # END
