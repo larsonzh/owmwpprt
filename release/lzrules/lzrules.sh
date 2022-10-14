@@ -267,16 +267,17 @@ print_wan_ispip_item_num() {
 }
 
 print_wan_ip() {
-    local ifn="$( ip route show | awk '$1 ~ /default/ {print $5}' )" strbuf=""
+    local ifn="$( ip route show | awk '$1 ~ /default/ {print $5}' )" strbuf="[$$]: ---------------------------------------------"
     if [ -n "${ifn}" ]; then
-        echo "$(lzdate)" [$$]: ---------------------------------------------
-        logger -p 1 "[$$]: ---------------------------------------------"
+        echo "$(lzdate) ${strbuf}"
+        logger -p 1 "${strbuf}"
         for ifn in ${ifn}
         do
-            strbuf="$( ip route show | awk '$1 ~ /default/ && $5 ~ "'"${ifn}"'" {print $5,$9,system("curl -s --connect-timeout 20 --interface "$9" -w n whatismyip.akamai.com 2> /dev/null")}' \
-                | awk -F 'n' '{print $1}' | awk '{printf "%s\t%-15s\t%s\n",$1,$2,$3}' )"
-            echo "$(lzdate) [$$]:   ${strbuf}"
-            logger -p 1 "[$$]:   ${strbuf}"
+            strbuf="$( ip route show \
+                | awk '$1 ~ /default/ && $5 ~ "'"${ifn}"'" {ifx=$9; if (ifx=="") ifx=$5; print $5,$9,system("curl -s --connect-timeout 20 --interface "ifx" -w n whatismyip.akamai.com 2> /dev/null")}' \
+                | awk -Fn '{print $1}' | awk '{printf "%s\t%-15s\t%s\n","'"[$$]:   "'"$1,$2,$3}' )"
+            echo "$(lzdate) ${strbuf}"
+            logger -p 1 "${strbuf}"
         done
     fi
 }
