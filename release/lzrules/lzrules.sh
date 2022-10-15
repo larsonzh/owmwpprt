@@ -69,19 +69,14 @@ ISP_8_WAN_PORT=0
 # 缺省为第一WAN口（0）。
 ISP_9_WAN_PORT=0
 
-## 定时更新ISP网络运营商CIDR网段数据
-## 0--启用；非0--禁用；取值范围：0~9
-## 缺省为禁用（0）。
-SCHEDULED_UPDATE=0
-
-## 定时更新时间参数定义
-## 建议在当天1:30后执行定时更新。
-## 缺省为每隔3天，小时数和分钟数由系统指定。
-INTERVAL_DAY=3  ## 间隔天数（1~31）；取值"3"表示每隔3天。
+# 定时更新ISP网络运营商CIDR网段数据时间参数定义
+# 建议在当天1:30后执行定时更新。
+# 缺省为每隔3天，小时数和分钟数由系统指定。
+INTERVAL_DAY=3  ## 间隔天数（1~31）：取值"3"表示每隔3天；取值"0"表示禁用定时更新。
 TIMER_HOUR=x    ## 时间小时数（0~23，x表示由系统指定）；取值"3"表示更新当天的凌晨3点。
 TIMER_MIN=x     ## 时间分钟数（0~59，x表示由系统指定）；取值"18"表示更新当天的凌晨3点18分。
-## 网段数据变更不很频繁，建议更新间隔时间不要太密集，有助于降低远程下载服务器的负荷压力。
-## 脚本运行期间，修改定时设置、路由器重启,或手工停止脚本运行后再次重启，会导致定时更新时间重新开始计数。
+# 网段数据变更不很频繁，更新间隔时间不要太密集，有助于降低远程下载服务器的负荷压力。
+# 脚本运行期间，修改定时设置、路由器重启,或手工停止脚本运行后再次重启，会导致定时更新时间重新开始计数。
 
 # 定时更新ISP网络运营商CIDR网段数据失败后自动重试次数
 # 0--不重试；>0--重试次数；取值范围：0~99
@@ -211,7 +206,10 @@ cleaning_user_data() {
     ! echo "${ISP_7_WAN_PORT}" | grep -q '^[0-7]$' && ISP_7_WAN_PORT="0"
     ! echo "${ISP_8_WAN_PORT}" | grep -q '^[0-7]$' && ISP_8_WAN_PORT="0"
     ! echo "${ISP_9_WAN_PORT}" | grep -q '^[0-7]$' && ISP_9_WAN_PORT="0"
-    ! echo "${RETRY_NUM}" | grep -qE '^[0-9]$|^[1-9][0-9]' && RETRY_NUM="5"
+    ! echo "${INTERVAL_DAY}" | grep -qE '^[1-9]$|^[1-2][0-9]$|^[3][0-1]$' && INTERVAL_DAY="3"
+    ! echo "${TIMER_HOUR}" | grep -qE '^[0-9]$|^[1][0-9]$|^[2][0-3]$' && TIMER_HOUR="x"
+    ! echo "${TIMER_MIN}" | grep -qE '^[0-9]$|^[1-5][0-9]$' && TIMER_MIN="x"
+    ! echo "${RETRY_NUM}" | grep -qE '^[0-9]$|^[1-9][0-9]$' && RETRY_NUM="5"
 }
 
 delete_ipsets() {
@@ -443,13 +441,27 @@ unload_system_boot() {
         return
     }
     sed -i "/^[^#]*${PROJECT_ID}/d" "${BOOT_START_FILENAME}" > /dev/null 2>&1
-    echo "$(lzdate)" [$$]: The bootstrap was successfully uninstalled.
-    logger -p 1 "[$$]: The bootstrap was successfully uninstalled."
+    echo "$(lzdate)" [$$]: The bootstrap was successfully unloaded.
+    logger -p 1 "[$$]: The bootstrap was successfully unloaded."
 }
 
 load_update_task() {
     echo "$(lzdate) ${MY_LINE}"
     logger -p 1 "${MY_LINE}"
+    if [ "${INTERVAL_DAY}" = "0" ]; then
+        echo "$(lzdate)" [$$]: The scheduled update task was not started.
+        logger -p 1 "[$$]: The scheduled update task was not started."
+        if crontab -l | grep -q "^[^#]*${PROJECT_ID}"; then
+            ! crontab -l | awk '!/^[ ]*[#]/ && $0 ~ "'"${PROJECT_ID}"'" {
+                if ($1 == "15" && $2 == "1" && $3 == "*/3" && $4 == "*" && $5 == "*") exit 1
+            }' && {
+                sed -i "/^[^#]*${PROJECT_ID}/d" "${CRONTABS_ROOT_FILENAME}" > /dev/null 2>&1
+                echo "$(lzdate)" [$$]: The previous scheduled update task was unloaded.
+                logger -p 1 "[$$]: The previous scheduled update task was unloaded."
+            }
+        fi
+        return
+    fi
     if ! crontab -l | grep -q "^[^#]*${PROJECT_ID}"; then
         sed -i "1i 15 1 */3 * * /bin/sh ${PATH_LZ}/${PROJECT_FILENAME} update > /dev/null 2>&1 # Added by LZ" "${CRONTABS_ROOT_FILENAME}" > /dev/null 2>&1
         crontab -l | grep -q "^[^#]*${PROJECT_ID}" && {
