@@ -5,7 +5,7 @@
 # LZ RULES script for OpenWrt based router
 
 # 脚本命令 (假设当前在lzrules目录)
-# 加载数据规则         ./lzrules.sh
+# 加载规则数据         ./lzrules.sh
 # 更新数据文件         ./lzrules.sh update
 # 卸载运行数据         ./lzrules.sh unload
 
