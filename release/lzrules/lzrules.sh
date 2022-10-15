@@ -427,34 +427,43 @@ load_update_task() {
         fi
         return
     fi
-    local interval_day="*/${INTERVAL_DAY}" timer_hour="${TIMER_HOUR}" timer_min="${TIMER_MIN}"
+    local interval_day="*/${INTERVAL_DAY}" timer_hour="${TIMER_HOUR}" timer_min="${TIMER_MIN}" xmode="0"
+    [ "${timer_hour}" = "x" ] && [ "${timer_min}" = "x" ] && xmode="1"
+    [ "${timer_hour}" = "x" ] && [ "${timer_min}" != "x" ] && xmode="2"
+    [ "${timer_hour}" != "x" ] && [ "${timer_min}" = "x" ] && xmode="3"
     [ "${timer_hour}" = "x" ] && timer_hour="$( date +"%H" )"
     [ "${timer_min}" = "x" ] && timer_min="$( date +"%M" )"
     if ! crontab -l | grep -q "^[^#]*${PROJECT_ID}"; then
-        sed -i "1i 15 1 */3 * * /bin/sh ${PATH_LZ}/${PROJECT_FILENAME} update > /dev/null 2>&1 # Added by LZ" "${CRONTABS_ROOT_FILENAME}" > /dev/null 2>&1
+        sed -i "1i ${timer_min} ${timer_hour} ${interval_day} * * /bin/sh ${PATH_LZ}/${PROJECT_FILENAME} update > /dev/null 2>&1 # Added by LZ" "${CRONTABS_ROOT_FILENAME}" > /dev/null 2>&1
         crontab -l | grep -q "^[^#]*${PROJECT_ID}" && {
             echo "$(lzdate)" [$$]: The scheduled update task was loaded successfully.
             logger -p 1 "[$$]: The scheduled update task was loaded successfully."
             return
         }
-        echo "15 1 */3 * * /bin/sh ${PATH_LZ}/${PROJECT_FILENAME} update > /dev/null 2>&1 # Added by LZ" >> "${CRONTABS_ROOT_FILENAME}" 2> /dev/null
+        echo "${timer_min} ${timer_hour} ${interval_day} /bin/sh ${PATH_LZ}/${PROJECT_FILENAME} update > /dev/null 2>&1 # Added by LZ" >> "${CRONTABS_ROOT_FILENAME}" 2> /dev/null
     else
-        ! crontab -l | awk '!/^[ ]*[#]/ && $0 ~ "'"${PROJECT_ID}"'" {
-            if ($1 == "15" && $2 == "1" && $3 == "*/3" && $4 == "*" && $5 == "*") exit 1
+        ! crontab -l | awk -v xm="${xmode}" '!/^[ ]*[#]/ && $0 ~ "'"${PROJECT_ID}"'" {
+            if (xm = "0" && $1 == "'"${timer_min}"'" && $2 == "'"${timer_hour}"'" && $3 == "'"${interval_day}"'" && $4 == "*" && $5 == "*") exit 1
+            if (xm = "1" && $3 == "'"${interval_day}"'" && $4 == "*" && $5 == "*") exit 1
+            if (xm = "2" && $1 == "'"${timer_min}"'" && $3 == "'"${interval_day}"'" && $4 == "*" && $5 == "*") exit 1
+            if (xm = "3" && $2 == "'"${timer_hour}"'" && $3 == "'"${interval_day}"'" && $4 == "*" && $5 == "*") exit 1
         }' && {
             echo "$(lzdate)" [$$]: The scheduled update task has been loaded.
             logger -p 1 "[$$]: The scheduled update task has been loaded."
             return
         }
-        sed -i "1i 15 1 */3 * * /bin/sh ${PATH_LZ}/${PROJECT_FILENAME} update > /dev/null 2>&1 # Added by LZ" "${CRONTABS_ROOT_FILENAME}" > /dev/null 2>&1
-        ! crontab -l | awk '!/^[ ]*[#]/ && $0 ~ "'"${PROJECT_ID}"'" {
-            if ($1 == "15" && $2 == "1" && $3 == "*/3" && $4 == "*" && $5 == "*") exit 1
+        sed -i "1i ${timer_min} ${timer_hour} ${interval_day} * * /bin/sh ${PATH_LZ}/${PROJECT_FILENAME} update > /dev/null 2>&1 # Added by LZ" "${CRONTABS_ROOT_FILENAME}" > /dev/null 2>&1
+        ! crontab -l | awk -v xm="${xmode}" '!/^[ ]*[#]/ && $0 ~ "'"${PROJECT_ID}"'" {
+            if (xm = "0" && $1 == "'"${timer_min}"'" && $2 == "'"${timer_hour}"'" && $3 == "'"${interval_day}"'" && $4 == "*" && $5 == "*") exit 1
+            if (xm = "1" && $3 == "'"${interval_day}"'" && $4 == "*" && $5 == "*") exit 1
+            if (xm = "2" && $1 == "'"${timer_min}"'" && $3 == "'"${interval_day}"'" && $4 == "*" && $5 == "*") exit 1
+            if (xm = "3" && $2 == "'"${timer_hour}"'" && $3 == "'"${interval_day}"'" && $4 == "*" && $5 == "*") exit 1
         }' && {
             echo "$(lzdate)" [$$]: The scheduled update task was loaded successfully.
             logger -p 1 "[$$]: The scheduled update task was loaded successfully."
             return
         }
-        echo "15 1 */3 * * /bin/sh ${PATH_LZ}/${PROJECT_FILENAME} update > /dev/null 2>&1 # Added by LZ" >> "${CRONTABS_ROOT_FILENAME}" 2> /dev/null
+        echo "${timer_min} ${timer_hour} ${interval_day} * * /bin/sh ${PATH_LZ}/${PROJECT_FILENAME} update > /dev/null 2>&1 # Added by LZ" >> "${CRONTABS_ROOT_FILENAME}" 2> /dev/null
     fi
     echo "$(lzdate)" [$$]: The scheduled update task was loaded successfully.
     logger -p 1 "[$$]: The scheduled update task was loaded successfully."
