@@ -207,8 +207,10 @@ cleaning_user_data() {
     ! echo "${ISP_8_WAN_PORT}" | grep -q '^[0-7]$' && ISP_8_WAN_PORT="0"
     ! echo "${ISP_9_WAN_PORT}" | grep -q '^[0-7]$' && ISP_9_WAN_PORT="0"
     ! echo "${INTERVAL_DAY}" | grep -qE '^[1-9]$|^[1-2][0-9]$|^[3][0-1]$' && INTERVAL_DAY="3"
-    ! echo "${TIMER_HOUR}" | grep -qE '^[0-9]$|^[1][0-9]$|^[2][0-3]$' && TIMER_HOUR="x"
-    ! echo "${TIMER_MIN}" | grep -qE '^[0-9]$|^[1-5][0-9]$' && TIMER_MIN="x"
+    ! echo "${TIMER_HOUR}" | grep -qE '^[0-9]$|^[1][0-9]$|^[2][0-3]$|^[xX]$' && TIMER_HOUR="x"
+    [ "${TIMER_HOUR}" = "X" ] && TIMER_HOUR="x"
+    ! echo "${TIMER_MIN}" | grep -qE '^[0-9]$|^[1-5][0-9]$|^[xX]$' && TIMER_MIN="x"
+    [ "${TIMER_MIN}" = "X" ] && TIMER_MIN="x"
     ! echo "${RETRY_NUM}" | grep -qE '^[0-9]$|^[1-9][0-9]$' && RETRY_NUM="5"
 }
 
@@ -408,43 +410,6 @@ check_isp_data() {
     return 0
 }
 
-load_system_boot() {
-    while true
-    do
-        [ "$( grep -c "^[^#]*${PATH_LZ}/${PROJECT_FILENAME}" "${BOOT_START_FILENAME}" 2> /dev/null )" = "1" ] && {
-            echo "$(lzdate)" [$$]: The bootstrap has been loaded.
-            logger -p 1 "[$$]: The bootstrap has been loaded."
-            break
-        }
-        sed -i "/^[^#]*${PROJECT_ID}/d" "${BOOT_START_FILENAME}" > /dev/null 2>&1
-        sed -i "1i /bin/sh ${PATH_LZ}/${PROJECT_FILENAME} update # Added by LZ" "${BOOT_START_FILENAME}" > /dev/null 2>&1
-        grep -q "^[^#]*${PATH_LZ}/${PROJECT_FILENAME}" "${BOOT_START_FILENAME}" 2> /dev/null && {
-            echo "$(lzdate)" [$$]: The bootstrap was loaded successfully.
-            logger -p 1 "[$$]: The bootstrap was loaded successfully."
-            break
-        }
-        sed -i "/^[ ]*exit[ ]*[0]/d" "${BOOT_START_FILENAME}" > /dev/null 2>&1
-        echo -e "/bin/sh ${PATH_LZ}/${PROJECT_FILENAME} update # Added by LZ\nexit 0" >> "${BOOT_START_FILENAME}" 2> /dev/null
-        echo "$(lzdate)" [$$]: The bootstrap was loaded successfully.
-        logger -p 1 "[$$]: The bootstrap was loaded successfully."
-    done
-    echo "$(lzdate) ${MY_LINE}"
-    echo "$(lzdate)" [$$]: All ISP data of the policy route have been loaded.
-    logger -p 1 "${MY_LINE}"
-    logger -p 1 "[$$]: All ISP data of the policy route have been loaded."
-}
-
-unload_system_boot() {
-    ! grep -q "^[^#]*${PROJECT_ID}" "${BOOT_START_FILENAME}" 2> /dev/null && {
-        echo "$(lzdate)" [$$]: No bootstrap entry.
-        logger -p 1 "[$$]: No bootstrap entry."
-        return
-    }
-    sed -i "/^[^#]*${PROJECT_ID}/d" "${BOOT_START_FILENAME}" > /dev/null 2>&1
-    echo "$(lzdate)" [$$]: The bootstrap was successfully unloaded.
-    logger -p 1 "[$$]: The bootstrap was successfully unloaded."
-}
-
 load_update_task() {
     echo "$(lzdate) ${MY_LINE}"
     logger -p 1 "${MY_LINE}"
@@ -462,6 +427,9 @@ load_update_task() {
         fi
         return
     fi
+    local interval_day="*/${INTERVAL_DAY}" timer_hour="${TIMER_HOUR}" timer_min="${TIMER_MIN}"
+    [ "${timer_hour}" = "x" ] && timer_hour="$( date +"%H" )"
+    [ "${timer_min}" = "x" ] && timer_min="$( date +"%M" )"
     if ! crontab -l | grep -q "^[^#]*${PROJECT_ID}"; then
         sed -i "1i 15 1 */3 * * /bin/sh ${PATH_LZ}/${PROJECT_FILENAME} update > /dev/null 2>&1 # Added by LZ" "${CRONTABS_ROOT_FILENAME}" > /dev/null 2>&1
         crontab -l | grep -q "^[^#]*${PROJECT_ID}" && {
@@ -501,6 +469,43 @@ unload_update_task() {
     sed -i "/^[^#]*${PROJECT_ID}/d" "${CRONTABS_ROOT_FILENAME}" > /dev/null 2>&1
     echo "$(lzdate)" [$$]: Successfully unloaded the scheduled update task.
     logger -p 1 "[$$]: Successfully unloaded the scheduled update task."
+}
+
+load_system_boot() {
+    while true
+    do
+        [ "$( grep -c "^[^#]*${PATH_LZ}/${PROJECT_FILENAME}" "${BOOT_START_FILENAME}" 2> /dev/null )" = "1" ] && {
+            echo "$(lzdate)" [$$]: The bootstrap has been loaded.
+            logger -p 1 "[$$]: The bootstrap has been loaded."
+            break
+        }
+        sed -i "/^[^#]*${PROJECT_ID}/d" "${BOOT_START_FILENAME}" > /dev/null 2>&1
+        sed -i "1i /bin/sh ${PATH_LZ}/${PROJECT_FILENAME} update # Added by LZ" "${BOOT_START_FILENAME}" > /dev/null 2>&1
+        grep -q "^[^#]*${PATH_LZ}/${PROJECT_FILENAME}" "${BOOT_START_FILENAME}" 2> /dev/null && {
+            echo "$(lzdate)" [$$]: The bootstrap was loaded successfully.
+            logger -p 1 "[$$]: The bootstrap was loaded successfully."
+            break
+        }
+        sed -i "/^[ ]*exit[ ]*[0]/d" "${BOOT_START_FILENAME}" > /dev/null 2>&1
+        echo -e "/bin/sh ${PATH_LZ}/${PROJECT_FILENAME} update # Added by LZ\nexit 0" >> "${BOOT_START_FILENAME}" 2> /dev/null
+        echo "$(lzdate)" [$$]: The bootstrap was loaded successfully.
+        logger -p 1 "[$$]: The bootstrap was loaded successfully."
+    done
+    echo "$(lzdate) ${MY_LINE}"
+    echo "$(lzdate)" [$$]: All ISP data of the policy route have been loaded.
+    logger -p 1 "${MY_LINE}"
+    logger -p 1 "[$$]: All ISP data of the policy route have been loaded."
+}
+
+unload_system_boot() {
+    ! grep -q "^[^#]*${PROJECT_ID}" "${BOOT_START_FILENAME}" 2> /dev/null && {
+        echo "$(lzdate)" [$$]: No bootstrap entry.
+        logger -p 1 "[$$]: No bootstrap entry."
+        return
+    }
+    sed -i "/^[^#]*${PROJECT_ID}/d" "${BOOT_START_FILENAME}" > /dev/null 2>&1
+    echo "$(lzdate)" [$$]: The bootstrap was successfully unloaded.
+    logger -p 1 "[$$]: The bootstrap was successfully unloaded."
 }
 
 command_parsing() {
