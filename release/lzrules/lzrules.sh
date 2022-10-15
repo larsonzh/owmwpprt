@@ -143,9 +143,6 @@ PROJECT_ID="lzrules"
 # 项目文件名
 PROJECT_FILENAME="${PROJECT_ID}.sh"
 
-# 项目自启动文件名
-BOOT_FILENAME="lzboot.sh"
-
 # 项目文件路径
 PATH_LZ="${0%/*}"
 [ "${PATH_LZ:0:1}" != '/' ] && PATH_LZ="$( pwd )${PATH_LZ#*.}"
@@ -216,7 +213,7 @@ create_ipsets() {
     local port="0"
     until [ "${port}" -ge "${MAX_WAN_PORT}" ]
     do
-        if [ -f "${MWAN3_FILENAME}" ] && eval grep -q "\${ISPIP_SET_${port}}" "${MWAN3_FILENAME}" 2> /dev/null; then
+        if [ -f "${MWAN3_FILENAME}" ] && eval grep -q "^[^#]*\${ISPIP_SET_${port}}" "${MWAN3_FILENAME}" 2> /dev/null; then
             eval ipset -q create "\${ISPIP_SET_${port}}" nethash #--hashsize 65535
             eval ipset -q flush "\${ISPIP_SET_${port}}"
         fi
@@ -404,26 +401,39 @@ check_isp_data() {
 }
 
 load_system_boot() {
-    grep -q "${PATH_LZ}/${PROJECT_FILENAME}" "${BOOT_START_FILENAME}" 2> /dev/null && return
-    sed -i "/${PROJECT_ID}/d" "${BOOT_START_FILENAME}" > /dev/null 2>&1
+    [ "$( grep -c "^[^#]*${PATH_LZ}/${PROJECT_FILENAME}" "${BOOT_START_FILENAME}" 2> /dev/null )" = "1" ] && return
+    sed -i "/^[^#]*${PROJECT_ID}/d" "${BOOT_START_FILENAME}" > /dev/null 2>&1
     sed -i "1i /bin/sh ${PATH_LZ}/${PROJECT_FILENAME} update # Added by LZ" "${BOOT_START_FILENAME}" > /dev/null 2>&1
+    grep -q "^[^#]*${PATH_LZ}/${PROJECT_FILENAME}" "${BOOT_START_FILENAME}" 2> /dev/null && return
+    sed -i "/^[ ]*exit[ ]*[0]/d" "${BOOT_START_FILENAME}" > /dev/null 2>&1
+    echo -e "/bin/sh ${PATH_LZ}/${PROJECT_FILENAME} update # Added by LZ\nexit 0" >> "${BOOT_START_FILENAME}" 2> /dev/null
 }
 
 unload_system_boot() {
-    ! grep -q "${PROJECT_ID}" "${BOOT_START_FILENAME}" 2> /dev/null && return
-    sed -i "/${PROJECT_ID}/d" "${BOOT_START_FILENAME}" > /dev/null 2>&1
+    ! grep -q "^[^#]*${PROJECT_ID}" "${BOOT_START_FILENAME}" 2> /dev/null && return
+    sed -i "/^[^#]*${PROJECT_ID}/d" "${BOOT_START_FILENAME}" > /dev/null 2>&1
 }
 
 load_update_task() {
-    if ! grep -q "15 1 \*/3 \* \* /bin/sh ${PATH_LZ}/${PROJECT_FILENAME}" "${CRONTABS_ROOT_FILENAME}" 2> /dev/null; then
-        sed -i "/${PROJECT_ID}/d" "${CRONTABS_ROOT_FILENAME}" > /dev/null 2>&1
-        sed -i "\$a 15 1 \*/3 \* \* /bin/sh ${PATH_LZ}/${PROJECT_FILENAME} update > /dev/null 2>&1 # Added by LZ" "${CRONTABS_ROOT_FILENAME}" > /dev/null 2>&1
+    if ! crontab -l | grep -q "^[^#]*${PROJECT_ID}"; then
+        sed -i "1i 15 1 */3 * * /bin/sh ${PATH_LZ}/${PROJECT_FILENAME} update > /dev/null 2>&1 # Added by LZ" "${CRONTABS_ROOT_FILENAME}" > /dev/null 2>&1
+        crontab -l | grep -q "^[^#]*${PROJECT_ID}" && return
+        echo "15 1 */3 * * /bin/sh ${PATH_LZ}/${PROJECT_FILENAME} update > /dev/null 2>&1 # Added by LZ" >> "${CRONTABS_ROOT_FILENAME}" 2> /dev/null
+    else
+        ! crontab -l | awk '!/^[ ]*[#]/ && $0 ~ "'"${PROJECT_ID}"'" {
+            if ($1 == "15" && $2 == "1" && $3 == "*/3" && $4 == "*" && $5 == "*") exit 1
+        }' && return
+        sed -i "1i 15 1 */3 * * /bin/sh ${PATH_LZ}/${PROJECT_FILENAME} update > /dev/null 2>&1 # Added by LZ" "${CRONTABS_ROOT_FILENAME}" > /dev/null 2>&1
+        ! crontab -l | awk '!/^[ ]*[#]/ && $0 ~ "'"${PROJECT_ID}"'" {
+            if ($1 == "15" && $2 == "1" && $3 == "*/3" && $4 == "*" && $5 == "*") exit 1
+        }' && return
+        echo "15 1 */3 * * /bin/sh ${PATH_LZ}/${PROJECT_FILENAME} update > /dev/null 2>&1 # Added by LZ" >> "${CRONTABS_ROOT_FILENAME}" 2> /dev/null
     fi
 }
 
 unload_update_task() {
-    ! grep -q "${PROJECT_ID}" "${CRONTABS_ROOT_FILENAME}" 2> /dev/null && return
-    sed -i "/${PROJECT_ID}/d" "${CRONTABS_ROOT_FILENAME}" > /dev/null 2>&1
+    ! crontab -l | grep -q "^[^#]*${PROJECT_ID}" && return
+    sed -i "/^[^#]*${PROJECT_ID}/d" "${CRONTABS_ROOT_FILENAME}" > /dev/null 2>&1
 }
 
 command_parsing() {
