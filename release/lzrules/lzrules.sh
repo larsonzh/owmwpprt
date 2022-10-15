@@ -435,6 +435,7 @@ unload_system_boot() {
 
 load_update_task() {
     echo "$(lzdate) ${MY_LINE}"
+    logger -p 1 "${MY_LINE}"
     if ! crontab -l | grep -q "^[^#]*${PROJECT_ID}"; then
         sed -i "1i 15 1 */3 * * /bin/sh ${PATH_LZ}/${PROJECT_FILENAME} update > /dev/null 2>&1 # Added by LZ" "${CRONTABS_ROOT_FILENAME}" > /dev/null 2>&1
         crontab -l | grep -q "^[^#]*${PROJECT_ID}" && {
