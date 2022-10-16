@@ -129,7 +129,7 @@ ISPIP_SET_6="ISPIP_SET_6"
 ISPIP_SET_7="ISPIP_SET_7"
 
 # 多WAN口负载均衡数据集名称
-ISPIP_BALANCE_SET="ISPIP_BALANCE_SET"
+BALANCE_SET="BALANCE_SET"
 
 # 国内ISP网络运营商CIDR网段数据文件总数
 ISP_TOTAL="10"
@@ -273,7 +273,7 @@ delete_ipsets() {
         eval ipset -q flush "\${ISPIP_SET_${index}}" && eval ipset -q destroy "\${ISPIP_SET_${index}}"
         let index++
     done
-    ipset -q flush "${ISPIP_BALANCE_SET}" && ipset -q destroy "${ISPIP_BALANCE_SET}"
+    ipset -q flush "${BALANCE_SET}" && ipset -q destroy "${BALANCE_SET}"
 }
 
 create_ipsets() {
@@ -286,9 +286,9 @@ create_ipsets() {
         fi
         let index++
     done
-    if [ -f "${MWAN3_FILENAME}" ] && grep -q "^[^#]*${ISPIP_BALANCE_SET}" "${MWAN3_FILENAME}" 2> /dev/null; then
-        ipset -q create "${ISPIP_BALANCE_SET}" nethash #--hashsize 65535
-        ipset -q flush "${ISPIP_BALANCE_SET}"
+    if [ -f "${MWAN3_FILENAME}" ] && grep -q "^[^#]*${BALANCE_SET}" "${MWAN3_FILENAME}" 2> /dev/null; then
+        ipset -q create "${BALANCE_SET}" nethash #--hashsize 65535
+        ipset -q flush "${BALANCE_SET}"
     fi
 }
 
@@ -350,11 +350,11 @@ print_wan_ispip_item_num() {
         fi
         let index++
     done
-    if [ "$( ipset -q -n list "${ISPIP_BALANCE_SET}" )" ]; then
-        num="$( get_ipset_total "${ISPIP_BALANCE_SET}" )"
-        wan="balance"
-        printf "%s %-12s %-13s\t%s\n" "$(lzdate) [$$]:  " "${wan}" "${ISPIP_BALANCE_SET}" "${num}" 
-        logger -p 1 "$( printf "%s %-6s\t%-13s%s\n" "[$$]:  " "${wan}" "${ISPIP_BALANCE_SET}" "${num}" )"
+    if [ "$( ipset -q -n list "${BALANCE_SET}" )" ]; then
+        num="$( get_ipset_total "${BALANCE_SET}" )"
+        wan="bal"
+        printf "%s %-12s %-13s\t%s\n" "$(lzdate) [$$]:  " "${wan}" "${BALANCE_SET}" "${num}" 
+        logger -p 1 "$( printf "%s %-6s\t%-13s%s\n" "[$$]:  " "${wan}" "${BALANCE_SET}" "${num}" )"
     fi
 }
 
@@ -392,10 +392,10 @@ load_ipsets() {
             eval add_net_address_sets "${PATH_DATA}/\${ISP_DATA_${index}}" "\${ISPIP_SET_${port}}"
             eval wan="\${WAN_${port}_NAME}"
         elif [ "${port}" = "${MAX_WAN_PORT}" ]; then
-            eval add_net_address_sets "${PATH_DATA}/\${ISP_DATA_${index}}" "${ISPIP_BALANCE_SET}"
-            wan="balance"
+            eval add_net_address_sets "${PATH_DATA}/\${ISP_DATA_${index}}" "${BALANCE_SET}"
+            wan="bal"
         else
-            wan="unavailable"
+            wan="inv"
         fi
         eval name="\${ISP_NAME_${index}}"
         eval num="\$( get_ipv4_data_file_item_total ${PATH_DATA}/\${ISP_DATA_${index}} )"
@@ -554,21 +554,21 @@ load_system_boot() {
     while true
     do
         [ "$( grep -c "^[^#]*${PATH_LZ}/${PROJECT_FILENAME}" "${BOOT_START_FILENAME}" 2> /dev/null )" = "1" ] && {
-            echo "$(lzdate)" [$$]: The bootstrap has been loaded.
-            logger -p 1 "[$$]: The bootstrap has been loaded."
+            echo "$(lzdate)" [$$]: The system boot process has been added.
+            logger -p 1 "[$$]: The system boot process has been added."
             break
         }
         sed -i "/^[^#]*${PROJECT_ID}/d" "${BOOT_START_FILENAME}" > /dev/null 2>&1
         sed -i "1i /bin/sh ${PATH_LZ}/${PROJECT_FILENAME} update # Added by LZ" "${BOOT_START_FILENAME}" > /dev/null 2>&1
         grep -q "^[^#]*${PATH_LZ}/${PROJECT_FILENAME}" "${BOOT_START_FILENAME}" 2> /dev/null && {
-            echo "$(lzdate)" [$$]: The bootstrap was loaded successfully.
-            logger -p 1 "[$$]: The bootstrap was loaded successfully."
+            echo "$(lzdate)" [$$]: Successfully joined the system boot process.
+            logger -p 1 "[$$]: Successfully joined the system boot process."
             break
         }
         sed -i "/^[ ]*exit[ ]*[0]/d" "${BOOT_START_FILENAME}" > /dev/null 2>&1
         echo -e "/bin/sh ${PATH_LZ}/${PROJECT_FILENAME} update # Added by LZ\nexit 0" >> "${BOOT_START_FILENAME}" 2> /dev/null
-        echo "$(lzdate)" [$$]: The bootstrap was loaded successfully.
-        logger -p 1 "[$$]: The bootstrap was loaded successfully."
+        echo "$(lzdate)" [$$]: Successfully joined the system boot process.
+        logger -p 1 "[$$]: Successfully joined the system boot process."
     done
     echo "$(lzdate) ${MY_LINE}"
     echo "$(lzdate)" [$$]: All ISP data of the policy route have been loaded.
