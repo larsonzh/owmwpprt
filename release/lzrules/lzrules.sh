@@ -19,53 +19,53 @@
 # ----------------用户运行策略自定义区----------------
 
 # 中国电信IPv4目标网段流量出口（网段数据文件：chinatelecom_cidr.txt）
-# 0--第一WAN口；1--第二WAN口；······；7--第八WAN口；取值范围：0~7
+# 0--第一WAN口；1--第二WAN口；···；7--第八WAN口；8--负载均衡；9--禁用；取值范围：0~9
 # 缺省为第一WAN口（0）。
 ISP_0_WAN_PORT=0
 
 # 中国联通/网通IPv4目标网段流量出口（网段数据文件：unicom_cnc_cidr.txt）
-# 0--第一WAN口；1--第二WAN口；······；7--第八WAN口；取值范围：0~7
+# 0--第一WAN口；1--第二WAN口；···；7--第八WAN口；8--负载均衡；9--禁用；取值范围：0~9
 # 缺省为第一WAN口（0）。
 ISP_1_WAN_PORT=0
 
 # 中国移动IPv4目标网段流量出口（网段数据文件：cmcc_cidr.txt）
-# 0--第一WAN口；1--第二WAN口；······；7--第八WAN口；取值范围：0~7
+# 0--第一WAN口；1--第二WAN口；···；7--第八WAN口；8--负载均衡；9--禁用；取值范围：0~9
 # 缺省为第二WAN口（1）。
 # 1：表示对中国移动网段的访问使用第二AN口。
 ISP_2_WAN_PORT=1
 
 # 中国铁通IPv4目标网段流量出口（网段数据文件：crtc_cidr.txt）
-# 0--第一WAN口；1--第二WAN口；······；7--第八WAN口；取值范围：0~7
+# 0--第一WAN口；1--第二WAN口；···；7--第八WAN口；8--负载均衡；9--禁用；取值范围：0~9
 # 缺省为第二WAN口（1）。
 ISP_3_WAN_PORT=1
 
 # 中国教育网IPv4目标网段流量出口（网段数据文件：cernet_cidr.txt）
-# 0--第一WAN口；1--第二WAN口；······；7--第八WAN口；取值范围：0~7
+# 0--第一WAN口；1--第二WAN口；···；7--第八WAN口；8--负载均衡；9--禁用；取值范围：0~9
 # 缺省值为第二WAN口（1）。
 ISP_4_WAN_PORT=1
 
 # 长城宽带/鹏博士IPv4目标网段流量出口（网段数据文件：gwbn_cidr.txt）
-# 0--第一WAN口；1--第二WAN口；······；7--第八WAN口；取值范围：0~7
+# 0--第一WAN口；1--第二WAN口；···；7--第八WAN口；8--负载均衡；9--禁用；取值范围：0~9
 # 缺省为第二WAN口（1）。
 ISP_5_WAN_PORT=1
 
 # 中国大陆其他运营商IPv4目标网段流量出口（网段数据文件：othernet_cidr.txt）
-# 0--第一WAN口；1--第二WAN口；······；7--第八WAN口；取值范围：0~7
+# 0--第一WAN口；1--第二WAN口；···；7--第八WAN口；8--负载均衡；9--禁用；取值范围：0~9
 # 缺省为第一WAN口（0）。
 ISP_6_WAN_PORT=0
 
 # 香港地区运营商IPv4目标网段流量出口（网段数据文件：hk_cidr.txt）
-# 0--第一WAN口；1--第二WAN口；······；7--第八WAN口；取值范围：0~7
+# 0--第一WAN口；1--第二WAN口；···；7--第八WAN口；8--负载均衡；9--禁用；取值范围：0~9
 # 缺省为第一WAN口（0）。
 ISP_7_WAN_PORT=0
 
 # 澳门地区运营商IPv4目标网段流量出口（网段数据文件：mo_cidr.txt）
-# 0--第一WAN口；1--第二WAN口；······；7--第八WAN口；取值范围：0~7
+# 0--第一WAN口；1--第二WAN口；···；7--第八WAN口；8--负载均衡；9--禁用；取值范围：0~9
 # 缺省为第一WAN口（0）。
 ISP_8_WAN_PORT=0
 
 # 台湾地区运营商IPv4目标网段流量出口（网段数据文件：tw_cidr.txt）
-# 0--第一WAN口；1--第二WAN口；······；7--第八WAN口；取值范围：0~7
+# 0--第一WAN口；1--第二WAN口；···；7--第八WAN口；8--负载均衡；9--禁用；取值范围：0~9
 # 缺省为第一WAN口（0）。
 ISP_9_WAN_PORT=0
 
@@ -127,6 +127,9 @@ ISPIP_SET_6="ISPIP_SET_6"
 
 # 第八WAN口国内网段数据集名称
 ISPIP_SET_7="ISPIP_SET_7"
+
+# 多WAN口负载均衡数据集名称
+ISPIP_BALANCE_SET="ISPIP_BALANCE_SET"
 
 # 国内ISP网络运营商CIDR网段数据文件总数
 ISP_TOTAL="10"
@@ -214,16 +217,16 @@ MY_LINE="[$$]: ---------------------------------------------"
 lzdate() { eval echo "$( date +"%F %T" )"; }
 
 cleaning_user_data() {
-    ! echo "${ISP_0_WAN_PORT}" | grep -q '^[0-7]$' && ISP_0_WAN_PORT="0"
-    ! echo "${ISP_1_WAN_PORT}" | grep -q '^[0-7]$' && ISP_1_WAN_PORT="0"
-    ! echo "${ISP_2_WAN_PORT}" | grep -q '^[0-7]$' && ISP_2_WAN_PORT="1"
-    ! echo "${ISP_3_WAN_PORT}" | grep -q '^[0-7]$' && ISP_3_WAN_PORT="1"
-    ! echo "${ISP_4_WAN_PORT}" | grep -q '^[0-7]$' && ISP_4_WAN_PORT="1"
-    ! echo "${ISP_5_WAN_PORT}" | grep -q '^[0-7]$' && ISP_5_WAN_PORT="1"
-    ! echo "${ISP_6_WAN_PORT}" | grep -q '^[0-7]$' && ISP_6_WAN_PORT="0"
-    ! echo "${ISP_7_WAN_PORT}" | grep -q '^[0-7]$' && ISP_7_WAN_PORT="0"
-    ! echo "${ISP_8_WAN_PORT}" | grep -q '^[0-7]$' && ISP_8_WAN_PORT="0"
-    ! echo "${ISP_9_WAN_PORT}" | grep -q '^[0-7]$' && ISP_9_WAN_PORT="0"
+    ! echo "${ISP_0_WAN_PORT}" | grep -q '^[0-9]$' && ISP_0_WAN_PORT="0"
+    ! echo "${ISP_1_WAN_PORT}" | grep -q '^[0-9]$' && ISP_1_WAN_PORT="0"
+    ! echo "${ISP_2_WAN_PORT}" | grep -q '^[0-9]$' && ISP_2_WAN_PORT="1"
+    ! echo "${ISP_3_WAN_PORT}" | grep -q '^[0-9]$' && ISP_3_WAN_PORT="1"
+    ! echo "${ISP_4_WAN_PORT}" | grep -q '^[0-9]$' && ISP_4_WAN_PORT="1"
+    ! echo "${ISP_5_WAN_PORT}" | grep -q '^[0-9]$' && ISP_5_WAN_PORT="1"
+    ! echo "${ISP_6_WAN_PORT}" | grep -q '^[0-9]$' && ISP_6_WAN_PORT="0"
+    ! echo "${ISP_7_WAN_PORT}" | grep -q '^[0-9]$' && ISP_7_WAN_PORT="0"
+    ! echo "${ISP_8_WAN_PORT}" | grep -q '^[0-9]$' && ISP_8_WAN_PORT="0"
+    ! echo "${ISP_9_WAN_PORT}" | grep -q '^[0-9]$' && ISP_9_WAN_PORT="0"
     ! echo "${INTERVAL_DAY}" | grep -qE '^[0-9]$|^[1-2][0-9]$|^[3][0-1]$' && INTERVAL_DAY="3"
     ! echo "${TIMER_HOUR}" | grep -qE '^[0-9]$|^[1][0-9]$|^[2][0-3]$|^[xX]$' && TIMER_HOUR="x"
     [ "${TIMER_HOUR}" = "X" ] && TIMER_HOUR="x"
@@ -270,6 +273,7 @@ delete_ipsets() {
         eval ipset -q flush "\${ISPIP_SET_${index}}" && eval ipset -q destroy "\${ISPIP_SET_${index}}"
         let index++
     done
+    ipset -q flush "${ISPIP_BALANCE_SET}" && ipset -q destroy "${ISPIP_BALANCE_SET}"
 }
 
 create_ipsets() {
@@ -282,6 +286,10 @@ create_ipsets() {
         fi
         let index++
     done
+    if [ -f "${MWAN3_FILENAME}" ] && grep -q "^[^#]*${ISPIP_BALANCE_SET}" "${MWAN3_FILENAME}" 2> /dev/null; then
+        ipset -q create "${ISPIP_BALANCE_SET}" nethash #--hashsize 65535
+        ipset -q flush "${ISPIP_BALANCE_SET}"
+    fi
 }
 
 add_net_address_sets() {
@@ -342,6 +350,12 @@ print_wan_ispip_item_num() {
         fi
         let index++
     done
+    if [ "$( ipset -q -n list "${ISPIP_BALANCE_SET}" )" ]; then
+        num="$( get_ipset_total "${ISPIP_BALANCE_SET}" )"
+        wan="balance"
+        printf "%s %-12s %-13s\t%s\n" "$(lzdate) [$$]:  " "${wan}" "${ISPIP_BALANCE_SET}" "${num}" 
+        logger -p 1 "$( printf "%s %-6s\t%-13s%s\n" "[$$]:  " "${wan}" "${ISPIP_BALANCE_SET}" "${num}" )"
+    fi
 }
 
 print_wan_ip() {
@@ -374,10 +388,17 @@ load_ipsets() {
     until [ "${index}" -ge "${ISP_TOTAL}" ]
     do
         eval port="\${ISP_${index}_WAN_PORT}"
-        eval add_net_address_sets "${PATH_DATA}/\${ISP_DATA_${index}}" "\${ISPIP_SET_${port}}"
+        if [ "${port}" -lt "${MAX_WAN_PORT}" ]; then
+            eval add_net_address_sets "${PATH_DATA}/\${ISP_DATA_${index}}" "\${ISPIP_SET_${port}}"
+            eval wan="\${WAN_${port}_NAME}"
+        elif [ "${port}" = "${MAX_WAN_PORT}" ]; then
+            eval add_net_address_sets "${PATH_DATA}/\${ISP_DATA_${index}}" "${ISPIP_BALANCE_SET}"
+            wan="balance"
+        else
+            wan="unavailable"
+        fi
         eval name="\${ISP_NAME_${index}}"
         eval num="\$( get_ipv4_data_file_item_total ${PATH_DATA}/\${ISP_DATA_${index}} )"
-        eval wan="\${WAN_${port}_NAME}"
         printf "%s %-11s\t%-6s\t\t%s\n" "$(lzdate) [$$]:  " "${name}" "${wan}" "${num}" 
         logger -p 1 "$( printf "%s %-11s\t%-6s\t%s\n" "[$$]:  " "${name}" "${wan}" "${num}" )"
         let index++
@@ -622,6 +643,7 @@ do
     command_parsing || break
     ! check_isp_data && { ! update_isp_data && break; }
     cleaning_user_data
+    get_wan_list
     delete_ipsets
     create_ipsets
     load_ipsets
