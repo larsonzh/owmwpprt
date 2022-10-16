@@ -18,53 +18,53 @@
 
 # ----------------用户运行策略自定义区----------------
 
-# 中国电信目标网段流量出口（网段数据文件：chinatelecom_cidr.txt）
+# 中国电信IPv4目标网段流量出口（网段数据文件：chinatelecom_cidr.txt）
 # 0--第一WAN口；1--第二WAN口；······；7--第八WAN口；取值范围：0~7
 # 缺省为第一WAN口（0）。
 ISP_0_WAN_PORT=0
 
-# 中国联通/网通目标网段流量出口（网段数据文件：unicom_cnc_cidr.txt）
+# 中国联通/网通IPv4目标网段流量出口（网段数据文件：unicom_cnc_cidr.txt）
 # 0--第一WAN口；1--第二WAN口；······；7--第八WAN口；取值范围：0~7
 # 缺省为第一WAN口（0）。
 ISP_1_WAN_PORT=0
 
-# 中国移动目标网段流量出口（网段数据文件：cmcc_cidr.txt）
+# 中国移动IPv4目标网段流量出口（网段数据文件：cmcc_cidr.txt）
 # 0--第一WAN口；1--第二WAN口；······；7--第八WAN口；取值范围：0~7
 # 缺省为第二WAN口（1）。
 # 1：表示对中国移动网段的访问使用第二AN口。
 ISP_2_WAN_PORT=1
 
-# 中国铁通目标网段流量出口（网段数据文件：crtc_cidr.txt）
+# 中国铁通IPv4目标网段流量出口（网段数据文件：crtc_cidr.txt）
 # 0--第一WAN口；1--第二WAN口；······；7--第八WAN口；取值范围：0~7
 # 缺省为第二WAN口（1）。
 ISP_3_WAN_PORT=1
 
-# 中国教育网目标网段流量出口（网段数据文件：cernet_cidr.txt）
+# 中国教育网IPv4目标网段流量出口（网段数据文件：cernet_cidr.txt）
 # 0--第一WAN口；1--第二WAN口；······；7--第八WAN口；取值范围：0~7
 # 缺省值为第二WAN口（1）。
 ISP_4_WAN_PORT=1
 
-# 长城宽带/鹏博士目标网段流量出口（网段数据文件：gwbn_cidr.txt）
+# 长城宽带/鹏博士IPv4目标网段流量出口（网段数据文件：gwbn_cidr.txt）
 # 0--第一WAN口；1--第二WAN口；······；7--第八WAN口；取值范围：0~7
 # 缺省为第二WAN口（1）。
 ISP_5_WAN_PORT=1
 
-# 中国大陆其他运营商目标网段流量出口（网段数据文件：othernet_cidr.txt）
+# 中国大陆其他运营商IPv4目标网段流量出口（网段数据文件：othernet_cidr.txt）
 # 0--第一WAN口；1--第二WAN口；······；7--第八WAN口；取值范围：0~7
 # 缺省为第一WAN口（0）。
 ISP_6_WAN_PORT=0
 
-# 香港地区运营商目标网段流量出口（网段数据文件：hk_cidr.txt）
+# 香港地区运营商IPv4目标网段流量出口（网段数据文件：hk_cidr.txt）
 # 0--第一WAN口；1--第二WAN口；······；7--第八WAN口；取值范围：0~7
 # 缺省为第一WAN口（0）。
 ISP_7_WAN_PORT=0
 
-# 澳门地区运营商目标网段流量出口（网段数据文件：mo_cidr.txt）
+# 澳门地区运营商IPv4目标网段流量出口（网段数据文件：mo_cidr.txt）
 # 0--第一WAN口；1--第二WAN口；······；7--第八WAN口；取值范围：0~7
 # 缺省为第一WAN口（0）。
 ISP_8_WAN_PORT=0
 
-# 台湾地区运营商目标网段流量出口（网段数据文件：tw_cidr.txt）
+# 台湾地区运营商IPv4目标网段流量出口（网段数据文件：tw_cidr.txt）
 # 0--第一WAN口；1--第二WAN口；······；7--第八WAN口；取值范围：0~7
 # 缺省为第一WAN口（0）。
 ISP_9_WAN_PORT=0
@@ -84,6 +84,18 @@ TIMER_MIN=x     ## 时间分钟数（0~59，x表示由系统指定）；取值"1
 RETRY_NUM=5
 # 若自动重试后经常下载失败，建议自行前往 https://ispip.clang.cn/ 网站手工下载获取与上述10个网络运营商网段数据
 # 文件同名的最新CIDR网段数据，下载后直接粘贴覆盖 /etc/lzrules/data/ 目录内同名数据文件，重启脚本即刻生效。
+
+# WAN口名称定义
+# 最多可定义7个传输IPv4流量的WAN口，要与系统网络设置文件（/etc/config/network）中的WAN口名称和顺序保持一致。
+# 缺省名称为 wan0，wan1，~ wan7，建议在配置系统时也按此名称和顺序设置。
+WAN_0_NAME=wan0
+WAN_1_NAME=wan1
+WAN_2_NAME=wan2
+WAN_3_NAME=wan3
+WAN_4_NAME=wan4
+WAN_5_NAME=wan5
+WAN_6_NAME=wan6
+WAN_7_NAME=wan7
 
 
 # ---------------------全局变量---------------------
@@ -295,14 +307,15 @@ get_ipset_total() {
 print_wan_ispip_item_num() {
     echo "$(lzdate) ${MY_LINE}"
     logger -p 1 "${MY_LINE}"
-    local index="0" name="" num="0"
+    local index="0" name="" num="0" wan="0"
     until [ "${index}" -ge "${MAX_WAN_PORT}" ]
     do
         eval name="\${ISPIP_SET_${index}}"
         if [ "$( ipset -q -n list "${name}" )" ]; then
             num="$( get_ipset_total "${name}" )"
-            printf "%s %-12s %-13s\t%s\n" "$(lzdate) [$$]:  " "wan${index}" "${name}" "${num}" 
-            logger -p 1 "$( printf "%s %-6s\t%-13s%s\n" "[$$]:  " "wan${index}" "${name}" "${num}" )"
+            eval wan="\${WAN_${index}_NAME}"
+            printf "%s %-12s %-13s\t%s\n" "$(lzdate) [$$]:  " "${wan}" "${name}" "${num}" 
+            logger -p 1 "$( printf "%s %-6s\t%-13s%s\n" "[$$]:  " "${wan}" "${name}" "${num}" )"
         fi
         let index++
     done
@@ -333,15 +346,16 @@ print_wan_ip() {
 }
 
 load_ipsets() {
-    local index="0" port="0" name="" num="0"
+    local index="0" port="0" name="" num="0" wan="0"
     until [ "${index}" -ge "${ISP_TOTAL}" ]
     do
         eval port="\${ISP_${index}_WAN_PORT}"
         eval add_net_address_sets "${PATH_DATA}/\${ISP_DATA_${index}}" "\${ISPIP_SET_${port}}"
         eval name="\${ISP_NAME_${index}}"
         eval num="\$( get_ipv4_data_file_item_total ${PATH_DATA}/\${ISP_DATA_${index}} )"
-        printf "%s %-11s\t%-6s\t\t%s\n" "$(lzdate) [$$]:  " "${name}" "wan${port}" "${num}" 
-        logger -p 1 "$( printf "%s %-11s\t%-6s\t%s\n" "[$$]:  " "${name}" "wan${port}" "${num}" )"
+        eval wan="\${WAN_${port}_NAME}"
+        printf "%s %-11s\t%-6s\t\t%s\n" "$(lzdate) [$$]:  " "${name}" "${wan}" "${num}" 
+        logger -p 1 "$( printf "%s %-11s\t%-6s\t%s\n" "[$$]:  " "${name}" "${wan}" "${num}" )"
         let index++
     done
     print_wan_ispip_item_num
