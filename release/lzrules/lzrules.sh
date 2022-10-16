@@ -232,8 +232,8 @@ cleaning_user_data() {
 get_wan_dev() {
     local wan="${1}"
     if [ -f "${HOST_NETWORK_FILENAME}" ]; then
-        wan="$( sed -e 's/^[ ]*//g' -e 's/[ ][ ]*/ /g' -e 's/[ ]$//g' "${HOST_NETWORK_FILENAME}" 2> /dev/null \
-            | awk -v flag=0 '$0 == "'"config interface \'${wan}\'"'" {flag=1; next} flag && $0 ~ /option device/ {print $3; exit}' \
+        wan="$( sed -e 's/[\t]/ /' -e 's/^[ ]*//g' -e 's/[ ][ ]*/ /g' -e 's/[ ]$//g' "${HOST_NETWORK_FILENAME}" 2> /dev/null \
+            | awk -v flag=0 '$0 == "'"config interface \'${wan}\'"'" {flag=1; next} flag && $0 ~ /^option device/ {print $3; exit}' \
             | sed "s/[']//g" )"
         [ -z "${wan}" ] && wan="${1}"
     fi
