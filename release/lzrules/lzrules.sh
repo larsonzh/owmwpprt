@@ -230,34 +230,48 @@ cleaning_user_data() {
 }
 
 get_wan_dev() {
-    local wan="${1}"
+    local dev="${1}"
     if [ -f "${HOST_NETWORK_FILENAME}" ]; then
-        wan="$( sed -e 's/[\t]/ /' -e 's/^[ ]*//g' -e 's/[ ][ ]*/ /g' -e 's/[ ]$//g' "${HOST_NETWORK_FILENAME}" 2> /dev/null \
-            | awk -v flag=0 '$0 == "'"config interface \'${wan}\'"'" {flag=1; next} flag && $0 ~ /^option device/ {print $3; exit}' \
+        dev="$( sed -e 's/[\t]/ /' -e 's/^[ ]*//g' -e 's/[ ][ ]*/ /g' -e 's/[ ]$//g' "${HOST_NETWORK_FILENAME}" 2> /dev/null \
+            | awk -v flag=0 '$0 == "'"config interface \'${dev}\'"'" {flag=1; next} flag && $0 ~ /^option device/ {print $3; exit}' \
             | sed "s/[']//g" )"
-        [ -z "${wan}" ] && wan="${1}"
+        [ -z "${dev}" ] && dev="${1}"
     fi
+    echo "${dev}"
+}
+
+get_wan_name() {
+    local wan="${1}" index="0" dev=""
+    until [ "${index}" -ge "${MAX_WAN_PORT}" ]
+    do
+        eval dev="\$( get_wan_dev \${WAN_${index}_NAME} )"
+        if [ "${dev}" = "${wan}" ]; then
+            eval wan="\${WAN_${index}_NAME}"
+            break
+        fi
+        let index++
+    done
     echo "${wan}"
 }
 
 delete_ipsets() {
-    local port="0"
-    until [ "${port}" -ge "${MAX_WAN_PORT}" ]
+    local index="0"
+    until [ "${index}" -ge "${MAX_WAN_PORT}" ]
     do
-        eval ipset -q flush "\${ISPIP_SET_${port}}" && eval ipset -q destroy "\${ISPIP_SET_${port}}"
-        let port++
+        eval ipset -q flush "\${ISPIP_SET_${index}}" && eval ipset -q destroy "\${ISPIP_SET_${index}}"
+        let index++
     done
 }
 
 create_ipsets() {
     local port="0"
-    until [ "${port}" -ge "${MAX_WAN_PORT}" ]
+    until [ "${index}" -ge "${MAX_WAN_PORT}" ]
     do
-        if [ -f "${MWAN3_FILENAME}" ] && eval grep -q "^[^#]*\${ISPIP_SET_${port}}" "${MWAN3_FILENAME}" 2> /dev/null; then
-            eval ipset -q create "\${ISPIP_SET_${port}}" nethash #--hashsize 65535
-            eval ipset -q flush "\${ISPIP_SET_${port}}"
+        if [ -f "${MWAN3_FILENAME}" ] && eval grep -q "^[^#]*\${ISPIP_SET_${index}}" "${MWAN3_FILENAME}" 2> /dev/null; then
+            eval ipset -q create "\${ISPIP_SET_${index}}" nethash #--hashsize 65535
+            eval ipset -q flush "\${ISPIP_SET_${index}}"
         fi
-        let port++
+        let index++
     done
 }
 
@@ -322,12 +336,13 @@ print_wan_ispip_item_num() {
 }
 
 print_wan_ip() {
-    local ifn="$( ip route show default 2> /dev/null | awk '{if ($5 != "") print $5}' )"
+    local ifn="$( ip route show default 2> /dev/null | awk '{if ($5 != "") print $5}' )" ifx=""
     [ -z "${ifn}" ] && return
     echo "$(lzdate) ${MY_LINE}"
     logger -p 1 "${MY_LINE}"
     for ifn in ${ifn}
     do
+        ifx="$( get_wan_name "${ifn}" )"
         ip -4 -o address show dev "${ifn}" 2> /dev/null \
             | awk '{
                 ifa=$4
@@ -338,7 +353,7 @@ print_wan_ip() {
             }' \
             | awk -Fn '{print $1}' \
             | awk '{
-                strbuf=sprintf("%s\t%-15s\t%s","'"[$$]:   "'"$1,$2,$3)
+                strbuf=sprintf("%s\t%-15s\t%s","'"[$$]:   ${ifx}"'",$2,$3)
                 printf("%s %s\n","'"$(lzdate)"'",strbuf)
                 system("logger -p 1 "strbuf)
             }'
