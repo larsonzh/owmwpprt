@@ -155,6 +155,9 @@ ISP_NAME_7="Hongkong"
 ISP_NAME_8="Macao"
 ISP_NAME_9="Taiwan"
 
+# IPv4 WAN端口列表
+WAN_PORT_LIST=""
+
 # 版本号
 LZ_VERSION=v1.0.0
 
@@ -238,6 +241,12 @@ get_wan_dev() {
         [ -z "${dev}" ] && dev="${1}"
     fi
     echo "${dev}"
+}
+
+get_wan_list() {
+    WAN_PORT_LIST="$( sed -e 's/[\t]/ /' -e 's/^[ ]*//g' -e 's/[ ][ ]*/ /g' -e 's/[ ]$//g' "${HOST_NETWORK_FILENAME}" 2> /dev/null \
+                    | awk -v port="" '$0 ~ "'"config interface"'" {port=$3; next} /^option proto/ {if ($3 == "'"\'dhcp\'"'") print port}' \
+                    | sed "s/[\']//g" )"
 }
 
 get_wan_name() {
