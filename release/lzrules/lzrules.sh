@@ -369,7 +369,6 @@ print_wan_ip() {
         ip -4 -o address show dev "${ifn}" 2> /dev/null \
             | awk '{
                 ifa=$4
-                if (ifa == "") ifa=$2
                 psn=index(ifa, "/")
                 if (psn > 0) ifa=substr(ifa, 1, psn-1)
                 print $2,ifa,system("curl -s --connect-timeout 20 --interface "ifa" -w n ""'"${PIPDN}"'"" 2> /dev/null")
