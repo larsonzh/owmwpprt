@@ -164,6 +164,9 @@ BOOT_START_FILENAME="/etc/rc.local"
 # 系统计划任务配置文件名
 CRONTABS_ROOT_FILENAME="/etc/crontabs/root"
 
+# 主机网络配置文件名
+HOST_NETWORK_FILENAME="/etc/config/network"
+
 # mwan3配置文件名
 MWAN3_FILENAME="/etc/config/mwan3"
 
@@ -212,6 +215,17 @@ cleaning_user_data() {
     ! echo "${TIMER_MIN}" | grep -qE '^[0-9]$|^[1-5][0-9]$|^[xX]$' && TIMER_MIN="x"
     [ "${TIMER_MIN}" = "X" ] && TIMER_MIN="x"
     ! echo "${RETRY_NUM}" | grep -qE '^[0-9]$|^[1-9][0-9]$' && RETRY_NUM="5"
+}
+
+get_wan_dev() {
+    local wan="${1}"
+    if [ -f "${HOST_NETWORK_FILENAME}" ]; then
+        wan="$( sed -e 's/^[ ]*//g' -e 's/[ ][ ]*/ /g' -e 's/[ ]$//g' "${HOST_NETWORK_FILENAME}" 2> /dev/null \
+            | awk -v flag=0 '$0 == "'"config interface \'${wan}\'"'" {flag=1; next} flag && $0 ~ /option device/ {print $3; exit}' \
+            | sed "s/[']//g" )"
+        [ -z "${wan}" ] && wan="${1}"
+    fi
+    echo "${wan}"
 }
 
 delete_ipsets() {
