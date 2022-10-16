@@ -264,7 +264,7 @@ delete_ipsets() {
 }
 
 create_ipsets() {
-    local port="0"
+    local index="0"
     until [ "${index}" -ge "${MAX_WAN_PORT}" ]
     do
         if [ -f "${MWAN3_FILENAME}" ] && eval grep -q "^[^#]*\${ISPIP_SET_${index}}" "${MWAN3_FILENAME}" 2> /dev/null; then
@@ -577,6 +577,7 @@ command_parsing() {
 
 print_header_info() {
     echo "$(lzdate)" [$$]:
+    echo "$(lzdate) ${MY_LINE}"
     echo "$(lzdate)" [$$]: LZ RULES "${LZ_VERSION}" script commands start...
     echo "$(lzdate)" [$$]: By LZ \(larsonzhang@gmail.com\)
     echo "$(lzdate) ${MY_LINE}"
@@ -584,6 +585,7 @@ print_header_info() {
     echo "$(lzdate) ${MY_LINE}"
 
     logger -p 1 "[$$]: "
+    logger -p 1 "${MY_LINE}"
     logger -p 1 "[$$]: LZ RULES ${LZ_VERSION} script commands start..."
     logger -p 1 "[$$]: By LZ (larsonzhang@gmail.com)"
     logger -p 1 "${MY_LINE}"
