@@ -11,6 +11,16 @@
 
 # OpenWrt多WAN口策略路由分流脚本
 
+# 说明：
+# 1.脚本基于mwan3软件使用，请提前到OpenWrt中的“Software”界面中搜索并下载安装如下软件：
+#    mwan3
+#    luci-app-mwan3
+#    luci-i18n-mwan3-zh-cn
+#    wget-ssl
+#    curl
+# 2.脚本中的WAN口按照OpenWrt“MultiWAN管理器-接口”配置界面里的IPv4协议接口设定顺序排列。
+# 3.脚本中的WAN口序列中不包括IPv6协议的接口。
+
 # BEIGIN
 
 # shellcheck disable=SC2034  # Unused variables left for readability
@@ -352,7 +362,7 @@ print_wan_ispip_item_num() {
     done
     if [ "$( ipset -q -n list "${ISPIP_SET_B}" )" ]; then
         num="$( get_ipset_total "${ISPIP_SET_B}" )"
-        wan="BAL"
+        wan="LB"
         printf "%s %-12s %-13s\t%s\n" "$(lzdate) [$$]:  " "${wan}" "${ISPIP_SET_B}" "${num}" 
         logger -p 1 "$( printf "%s %-6s\t%-13s%s\n" "[$$]:  " "${wan}" "${ISPIP_SET_B}" "${num}" )"
     fi
@@ -392,9 +402,9 @@ load_ipsets() {
             wan="$( get_wan_name "${port}" )"
         elif [ "${port}" = "${MAX_WAN_PORT}" ]; then
             eval add_net_address_sets "${PATH_DATA}/\${ISP_DATA_${index}}" "${ISPIP_SET_B}"
-            wan="BAL"
+            wan="LB"
         else
-            wan="INV"
+            wan="OFF"
         fi
         eval name="\${ISP_NAME_${index}}"
         eval num="\$( get_ipv4_data_file_item_total ${PATH_DATA}/\${ISP_DATA_${index}} )"
