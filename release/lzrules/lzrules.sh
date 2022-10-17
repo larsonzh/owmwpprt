@@ -239,7 +239,7 @@ get_wan_dev() {
     local dev="${1}"
     if [ -f "${HOST_NETWORK_FILENAME}" ]; then
         dev="$( sed -e 's/[\t]/ /' -e 's/^[ ]*//g' -e 's/[ ][ ]*/ /g' -e 's/[ ]$//g' "${HOST_NETWORK_FILENAME}" 2> /dev/null \
-            | awk -v flag=0 '$0 == "'"config interface \'${dev}\'"'" {flag=1; next} flag && $0 ~ /^option device/ {print $3; exit}' \
+            | awk -v flag=0 '$0 == "'"config interface \'${dev}\'"'" {flag=1; next} /^config/ {flag=0; next} flag && /^option device/ {print $3; exit}' \
             | sed "s/[']//g" )"
         [ -z "${dev}" ] && dev="${1}"
     fi
@@ -247,8 +247,9 @@ get_wan_dev() {
 }
 
 get_wan_list() {
-    WAN_PORT_LIST="$( sed -e 's/[\t]/ /' -e 's/^[ ]*//g' -e 's/[ ][ ]*/ /g' -e 's/[ ]$//g' "${HOST_NETWORK_FILENAME}" 2> /dev/null \
-                    | awk -v port="" '$0 ~ "'"config interface"'" {port=$3; next} /^option proto/ {if ($3 == "'"\'dhcp\'"'") print port}' \
+    [ ! -f "${MWAN3_FILENAME}" ] && return
+    WAN_PORT_LIST="$( sed -e 's/[\t]/ /' -e 's/^[ ]*//g' -e 's/[ ][ ]*/ /g' -e 's/[ ]$//g' "${MWAN3_FILENAME}" 2> /dev/null \
+                    | awk -v flag=0 -v port="" '/^config interface/ {flag=1; port=$3; next} /^config/ {flag=0; next} flag && /^option family/ {if ($3 == "'"\'ipv4\'"'") print port}' \
                     | sed "s/[\']//g" )"
 }
 
