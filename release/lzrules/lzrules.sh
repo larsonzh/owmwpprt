@@ -249,7 +249,7 @@ get_wan_dev() {
 get_wan_list() {
     [ ! -f "${MWAN3_FILENAME}" ] && return
     WAN_PORT_LIST="$( sed -e 's/[\t]/ /' -e 's/^[ ]*//g' -e 's/[ ][ ]*/ /g' -e 's/[ ]$//g' "${MWAN3_FILENAME}" 2> /dev/null \
-                    | awk -v flag=0 -v port="" '/^config interface/ {flag=1; port=$3; next} /^config/ {flag=0; next} flag && /^option family/ {if ($3 == "'"\'ipv4\'"'") print port}' \
+                    | awk -v flag=0 -v port="" '/^config interface/ {flag=1; port=$3; next} /^config/ {flag=0; next} flag && $0 ~ "'"^option family \'ipv4\'"'" {print port}' \
                     | sed "s/[\']//g" )"
 }
 
