@@ -260,8 +260,9 @@ get_wan_if() {
 }
 
 get_wan_name() {
-    local wan=""
-    [ -n "${WAN_DEV_LIST}" ] && wan="$( echo "${WAN_DEV_LIST}" | awk 'NR == "'"${1}"'" {print $1}' )"
+    local index="${1}" wan="" 
+    let index++
+    [ -n "${WAN_DEV_LIST}" ] && wan="$( echo "${WAN_DEV_LIST}" | awk 'NR == "'"${index}"'" {print $1}' )"
     echo "${wan}"
 }
 
