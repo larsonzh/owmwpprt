@@ -11,7 +11,7 @@
 
 # OpenWrt多WAN口策略路由分流脚本
 
-# 说明：
+# 使用说明：
 # 1.脚本作为mwan3的配套软件使用，请提前到OpenWrt中的“Software”界面内搜索并下载安装如下软件：
 #    mwan3
 #    luci-app-mwan3
