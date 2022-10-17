@@ -149,15 +149,6 @@ ISP_NAME_9="TAIWAN"
 # IPv4 WAN端口设备列表
 WAN_DEV_LIST=""
 
-index="0"
-until [ "${index}" -gt "${MAX_WAN_PORT}" ]
-do
-    # WAN口名称定义
-    eval "WAN_${index}_NAME="
-    let index++
-done
-unset index
-
 # 版本号
 LZ_VERSION=v1.0.0
 
@@ -259,13 +250,6 @@ get_wan_dev_list() {
         WAN_DEV_LIST="$( echo "${WAN_DEV_LIST}" | sed -e "\$a wan${num}x eth${num}x" -e '/^[ ]*$/d' )"
         let num++
     done
-    wan_list="$(  echo "${WAN_DEV_LIST}" | awk '{print $1}' )"
-    num="0"
-    for wan in ${wan_list}
-    do
-        eval "WAN_${num}_NAME=${wan}"
-        let num++
-    done
 }
 
 get_wan_if() {
@@ -359,7 +343,7 @@ print_wan_ispip_item_num() {
         eval name="\${ISPIP_SET_${index}}"
         if [ "$( ipset -q -n list "${name}" )" ]; then
             num="$( get_ipset_total "${name}" )"
-            eval wan="\${WAN_${index}_NAME}"
+            wan="$( get_wan_name "${index}" )"
             printf "%s %-12s %-13s\t%s\n" "$(lzdate) [$$]:  " "${wan}" "${name}" "${num}" 
             logger -p 1 "$( printf "%s %-6s\t%-13s%s\n" "[$$]:  " "${wan}" "${name}" "${num}" )"
         fi
@@ -404,7 +388,7 @@ load_ipsets() {
         eval port="\${ISP_${index}_WAN_PORT}"
         if [ "${port}" -lt "${MAX_WAN_PORT}" ]; then
             eval add_net_address_sets "${PATH_DATA}/\${ISP_DATA_${index}}" "\${ISPIP_SET_${port}}"
-            eval wan="\${WAN_${port}_NAME}"
+            wan="$( get_wan_name "${port}" )"
         elif [ "${port}" = "${MAX_WAN_PORT}" ]; then
             eval add_net_address_sets "${PATH_DATA}/\${ISP_DATA_${index}}" "${ISPIP_SET_B}"
             wan="BAL"
