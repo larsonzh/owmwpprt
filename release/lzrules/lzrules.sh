@@ -85,18 +85,6 @@ RETRY_NUM=5
 # 若自动重试后经常下载失败，建议自行前往 https://ispip.clang.cn/ 网站手工下载获取与上述10个网络运营商网段数据
 # 文件同名的最新CIDR网段数据，下载后直接粘贴覆盖 /etc/lzrules/data/ 目录内同名数据文件，重启脚本即刻生效。
 
-# WAN口名称定义
-# 最多可定义7个传输IPv4流量的WAN口，要与系统网络设置文件（/etc/config/network）中的WAN口名称和顺序保持一致。
-# 缺省名称为 wan0，wan1，~ wan7，建议在配置系统时也按此名称和顺序设置。
-WAN_0_NAME=wan0
-WAN_1_NAME=wan1
-WAN_2_NAME=wan2
-WAN_3_NAME=wan3
-WAN_4_NAME=wan4
-WAN_5_NAME=wan5
-WAN_6_NAME=wan6
-WAN_7_NAME=wan7
-
 
 # ---------------------全局变量---------------------
 
@@ -129,7 +117,7 @@ ISPIP_SET_6="ISPIP_SET_6"
 ISPIP_SET_7="ISPIP_SET_7"
 
 # 多WAN口负载均衡数据集名称
-BALANCE_SET="BALANCE_SET"
+ISPIP_SET_B="ISPIP_SET_B"
 
 # 国内ISP网络运营商CIDR网段数据文件总数
 ISP_TOTAL="10"
@@ -153,13 +141,22 @@ ISP_NAME_2="CMCC"
 ISP_NAME_3="CRTC"
 ISP_NAME_4="CERNET"
 ISP_NAME_5="GWBN"
-ISP_NAME_6="Other"
-ISP_NAME_7="Hongkong"
-ISP_NAME_8="Macao"
-ISP_NAME_9="Taiwan"
+ISP_NAME_6="OTHER"
+ISP_NAME_7="HONGKONG"
+ISP_NAME_8="MACAO"
+ISP_NAME_9="TAIWAN"
 
-# IPv4 WAN端口列表
-WAN_PORT_LIST=""
+# IPv4 WAN端口设备列表
+WAN_DEV_LIST=""
+
+index="0"
+until [ "${index}" -gt "${MAX_WAN_PORT}" ]
+do
+    # WAN口名称定义
+    eval "WAN_${index}_NAME="
+    let index++
+done
+unset index
 
 # 版本号
 LZ_VERSION=v1.0.0
@@ -235,35 +232,52 @@ cleaning_user_data() {
     ! echo "${RETRY_NUM}" | grep -qE '^[0-9]$|^[1-9][0-9]$' && RETRY_NUM="5"
 }
 
-get_wan_dev() {
+get_wan_dev_if() {
     local dev="${1}"
-    if [ -f "${HOST_NETWORK_FILENAME}" ]; then
-        dev="$( sed -e 's/[\t]/ /' -e 's/^[ ]*//g' -e 's/[ ][ ]*/ /g' -e 's/[ ]$//g' "${HOST_NETWORK_FILENAME}" 2> /dev/null \
-            | awk -v flag=0 '$0 == "'"config interface \'${dev}\'"'" {flag=1; next} /^config/ {flag=0; next} flag && /^option device/ {print $3; exit}' \
-            | sed "s/[']//g" )"
-        [ -z "${dev}" ] && dev="${1}"
-    fi
+    dev="$( echo "${2}" | awk -v flag=0 '$0 == "'"config interface \'${dev}\'"'" {flag=1; next} /^config/ {flag=0; next} flag && /^option device/ {print "'"${dev}"'",$3; exit}' | sed "s/[']//g" )"
+    [ -z "${dev}" ] && dev="${1}"
     echo "${dev}"
 }
 
-get_wan_list() {
-    [ ! -f "${MWAN3_FILENAME}" ] && return
-    WAN_PORT_LIST="$( sed -e 's/[\t]/ /' -e 's/^[ ]*//g' -e 's/[ ][ ]*/ /g' -e 's/[ ]$//g' "${MWAN3_FILENAME}" 2> /dev/null \
-                    | awk -v flag=0 -v port="" '/^config interface/ {flag=1; port=$3; next} /^config/ {flag=0; next} flag && $0 ~ "'"^option family \'ipv4\'"'" {print port}' \
-                    | sed "s/[\']//g" )"
+get_wan_dev_list() {
+    local wan_list="" buf=""  wan="" wan_dev="" num="0"
+    [ -f "${MWAN3_FILENAME}" ] && wan_list="$( sed -e 's/[\t]/ /' -e 's/^[ ]*//g' -e 's/[ ][ ]*/ /g' -e 's/[ ]$//g' "${MWAN3_FILENAME}" 2> /dev/null \
+        | awk -v flag=0 -v port="" '/^config interface/ {flag=1; port=$3; next} /^config/ {flag=0; next} flag && $0 ~ "'"^option family \'ipv4\'"'" {print port}' \
+        | sed "s/[\']//g" )"
+    [ -f "${HOST_NETWORK_FILENAME}" ] && buf="$( sed -e 's/[\t]/ /' -e 's/^[ ]*//g' -e 's/[ ][ ]*/ /g' -e 's/[ ]$//g' "${HOST_NETWORK_FILENAME}" 2> /dev/null )"
+    WAN_DEV_LIST=""
+    for wan in ${wan_list}
+    do
+        wan_dev="$( get_wan_dev_if "${wan}" "${buf}" )"
+        WAN_DEV_LIST="$( echo "${WAN_DEV_LIST}" | sed -e "\$a ${wan_dev}" -e '/^[ ]*$/d' )"
+        let num++
+        [ "${num}" -ge "${MAX_WAN_PORT}" ] && break
+    done
+    num="$( echo "${WAN_DEV_LIST}" | wc -l )"
+    until [ "${num}" -ge "${MAX_WAN_PORT}" ]
+    do
+        WAN_DEV_LIST="$( echo "${WAN_DEV_LIST}" | sed -e "\$a wan${num}x eth${num}x" -e '/^[ ]*$/d' )"
+        let num++
+    done
+    wan_list="$(  echo "${WAN_DEV_LIST}" | awk '{print $1}' )"
+    num="0"
+    for wan in ${wan_list}
+    do
+        eval "WAN_${num}_NAME=${wan}"
+        let num++
+    done
+}
+
+get_wan_if() {
+    local wan="${1}"
+    [ -n "${WAN_DEV_LIST}" ] && wan="$( echo "${WAN_DEV_LIST}" | awk '$2 == "'"${wan}"'" {print $1; exit}' )"
+    [ -z "${wan}" ] && wan="${1}"
+    echo "${wan}"
 }
 
 get_wan_name() {
-    local wan="${1}" index="0" dev=""
-    until [ "${index}" -ge "${MAX_WAN_PORT}" ]
-    do
-        eval dev="\$( get_wan_dev \${WAN_${index}_NAME} )"
-        if [ "${dev}" = "${wan}" ]; then
-            eval wan="\${WAN_${index}_NAME}"
-            break
-        fi
-        let index++
-    done
+    local wan=""
+    [ -n "${WAN_DEV_LIST}" ] && wan="$( echo "${WAN_DEV_LIST}" | awk 'NR == "'"${1}"'" {print $1}' )"
     echo "${wan}"
 }
 
@@ -274,7 +288,7 @@ delete_ipsets() {
         eval ipset -q flush "\${ISPIP_SET_${index}}" && eval ipset -q destroy "\${ISPIP_SET_${index}}"
         let index++
     done
-    ipset -q flush "${BALANCE_SET}" && ipset -q destroy "${BALANCE_SET}"
+    ipset -q flush "${ISPIP_SET_B}" && ipset -q destroy "${ISPIP_SET_B}"
 }
 
 create_ipsets() {
@@ -287,9 +301,9 @@ create_ipsets() {
         fi
         let index++
     done
-    if [ -f "${MWAN3_FILENAME}" ] && grep -q "^[^#]*${BALANCE_SET}" "${MWAN3_FILENAME}" 2> /dev/null; then
-        ipset -q create "${BALANCE_SET}" nethash #--hashsize 65535
-        ipset -q flush "${BALANCE_SET}"
+    if [ -f "${MWAN3_FILENAME}" ] && grep -q "^[^#]*${ISPIP_SET_B}" "${MWAN3_FILENAME}" 2> /dev/null; then
+        ipset -q create "${ISPIP_SET_B}" nethash #--hashsize 65535
+        ipset -q flush "${ISPIP_SET_B}"
     fi
 }
 
@@ -351,11 +365,11 @@ print_wan_ispip_item_num() {
         fi
         let index++
     done
-    if [ "$( ipset -q -n list "${BALANCE_SET}" )" ]; then
-        num="$( get_ipset_total "${BALANCE_SET}" )"
-        wan="bal"
-        printf "%s %-12s %-13s\t%s\n" "$(lzdate) [$$]:  " "${wan}" "${BALANCE_SET}" "${num}" 
-        logger -p 1 "$( printf "%s %-6s\t%-13s%s\n" "[$$]:  " "${wan}" "${BALANCE_SET}" "${num}" )"
+    if [ "$( ipset -q -n list "${ISPIP_SET_B}" )" ]; then
+        num="$( get_ipset_total "${ISPIP_SET_B}" )"
+        wan="BAL"
+        printf "%s %-12s %-13s\t%s\n" "$(lzdate) [$$]:  " "${wan}" "${ISPIP_SET_B}" "${num}" 
+        logger -p 1 "$( printf "%s %-6s\t%-13s%s\n" "[$$]:  " "${wan}" "${ISPIP_SET_B}" "${num}" )"
     fi
 }
 
@@ -366,7 +380,7 @@ print_wan_ip() {
     logger -p 1 "${MY_LINE}"
     for ifn in ${ifn}
     do
-        ifx="$( get_wan_name "${ifn}" )"
+        ifx="$( get_wan_if "${ifn}" )"
         ip -4 -o address show dev "${ifn}" 2> /dev/null \
             | awk '{
                 ifa=$4
@@ -392,15 +406,15 @@ load_ipsets() {
             eval add_net_address_sets "${PATH_DATA}/\${ISP_DATA_${index}}" "\${ISPIP_SET_${port}}"
             eval wan="\${WAN_${port}_NAME}"
         elif [ "${port}" = "${MAX_WAN_PORT}" ]; then
-            eval add_net_address_sets "${PATH_DATA}/\${ISP_DATA_${index}}" "${BALANCE_SET}"
-            wan="bal"
+            eval add_net_address_sets "${PATH_DATA}/\${ISP_DATA_${index}}" "${ISPIP_SET_B}"
+            wan="BAL"
         else
-            wan="inv"
+            wan="INV"
         fi
         eval name="\${ISP_NAME_${index}}"
         eval num="\$( get_ipv4_data_file_item_total ${PATH_DATA}/\${ISP_DATA_${index}} )"
-        printf "%s %-11s\t%-6s\t\t%s\n" "$(lzdate) [$$]:  " "${name}" "${wan}" "${num}" 
-        logger -p 1 "$( printf "%s %-11s\t%-6s\t%s\n" "[$$]:  " "${name}" "${wan}" "${num}" )"
+        printf "%s %s\t\t%s\t\t%s\n" "$(lzdate) [$$]:  " "${name}" "${wan}" "${num}" 
+        logger -p 1 "$( printf "%s %-11s \t%-6s\t%s\n" "[$$]:  " "${name}" "${wan}" "${num}" )"
         let index++
     done
     print_wan_ispip_item_num
@@ -643,7 +657,7 @@ do
     command_parsing || break
     ! check_isp_data && { ! update_isp_data && break; }
     cleaning_user_data
-    get_wan_list
+    get_wan_dev_list
     delete_ipsets
     create_ipsets
     load_ipsets
