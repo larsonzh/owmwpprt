@@ -12,14 +12,15 @@
 # OpenWrt多WAN口策略路由分流脚本
 
 # 说明：
-# 1.脚本基于mwan3软件使用，请提前到OpenWrt中的“Software”界面中搜索并下载安装如下软件：
+# 1.脚本基于mwan3软件使用，请提前到OpenWrt中的“Software”界面内搜索并下载安装如下软件：
 #    mwan3
 #    luci-app-mwan3
 #    luci-i18n-mwan3-zh-cn
 #    wget-ssl
 #    curl
 # 2.脚本中的WAN口按照OpenWrt“MultiWAN管理器-接口”配置界面里的IPv4协议接口设定顺序排列。
-# 3.脚本中的WAN口序列中不包括IPv6协议的接口。
+# 3.脚本中的WAN口序列中不包括IPv6协议的接口，IPv6协议的流量出口直接在“MultiWAN管理器”中配置。
+# 4.脚本已涵盖中国地区所有运营商IPv4目标网段，访问国外的流量出口直接在“MultiWAN管理器”中配置。
 
 # BEIGIN
 
