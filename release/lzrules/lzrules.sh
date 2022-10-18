@@ -18,7 +18,7 @@
 #    luci-i18n-mwan3-zh-cn
 #    wget-ssl
 #    curl
-# 2.脚本中的WAN口按照OpenWrt“MultiWAN管理器-接口”配置界面里的IPv4协议接口设定顺序排列。
+# 2.脚本中的WAN口按照OpenWrt“网络-MultiWAN管理器-接口”配置界面里的IPv4协议接口设定顺序排列。
 # 3.脚本中的WAN口序列中不包括IPv6协议的接口，IPv6协议的流量出口在“MultiWAN管理器”中配置出口策略规则。
 # 4.脚本已涵盖中国地区所有运营商IPv4目标网段，访问国“外的流量出口在“MultiWAN管理器”中配置出口策略规则。
 # 5.在脚本中配置完流量出口后，需在MultiWAN管理器-规则”界面内，将WAN口数据集名称（如：ISPIP_SET_0），
@@ -103,7 +103,7 @@ RETRY_NUM=5
 
 # 完成出口设定后，需将WAN口的网段数据集名称（例如：ISPIP_SET_0）填入“MultiWAN管理器”内相应WAN口策略规则
 # 条目中的“IP配置”字段内，形成绑定关系，即可最终通过OpenWrt内的mwan3软件完成多WAN口流量的策略路由。脚本
-# 的主要作用就是为mwan3生成可供其多个WAN口通道使用的目标流量网段数据集合，助其实现更为复杂的业务策略。
+# 的主要作用就是为mwan3生成可供其多个WAN口通道选择使用的目标流量网段数据集合，从而实现更为复杂的业务策略。
 
 # 第一WAN口国内网段数据集名称
 ISPIP_SET_0="ISPIP_SET_0"
@@ -245,7 +245,8 @@ cleaning_user_data() {
 
 get_wan_dev_if() {
     local dev="${1}"
-    dev="$( echo "${2}" | awk -v flag=0 '$0 == "'"config interface \'${dev}\'"'" {flag=1; next} /^config/ {flag=0; next} flag && /^option device/ {print "'"${dev}"'",$3; exit}' | sed "s/[']//g" )"
+    dev="$( echo "${2}" | awk -v flag=0 '$0 == "'"config interface \'${dev}\'"'" {flag=1; next} /^config/ {flag=0; next} flag && /^option device/ {print "'"${dev}"'",$3; exit}' \
+        | sed "s/[']//g" )"
     [ -z "${dev}" ] && dev="${1}"
     echo "${dev}"
 }
@@ -350,6 +351,42 @@ get_ipv4_data_file_item_total() {
     echo "${retval}"
 }
 
+get_wan() {
+    local wan="$( echo "${2}" | awk -v flag=0 '$0 == "'"config member \'${1}\'"'" {flag=1; next} /^config/ {flag=0; next} flag && /^option interface/ {print $3; exit}' \
+        | sed "s/[\']//g" )"
+    echo "${wan}"
+}
+
+get_member_list() {
+    local member_list="$( echo "${2}" | awk -v flag=0 '$0 == "'"config policy \'${1}\'"'" {flag=1; next} /^config/ {flag=0; next} flag && /^list use_member/ {print $3}' \
+        | sed "s/[\']//g" )"
+    echo "${member_list}"
+}
+
+get_policy() {
+    local policy="$( echo "${2}" | awk -v flag=0 '$0 == "'"config rule \'${1}\'"'" {flag=1; next} /^config/ {flag=0; next} flag && /^option use_policy/ {print $3; exit}' \
+        | sed "s/[\']//g" )"
+    echo "${policy}"
+}
+
+get_rule_list() {
+    local rule_list="$( echo "${2}" | awk -v flag=0 -v rule="" '/^config rule/ {flag=1; rule=$3; next} /^config/ {flag=0; next} flag && $0 == "'"option ipset \'${1}\'"'" {print rule}' \
+        | sed "s/[\']//g" )"
+    echo "${rule_list}"
+}
+
+get_wan_list() {
+    local wan_list="" rule="" member=""
+    for rule in $( get_rule_list "${1}" "${2}" )
+    do
+        for member in $( get_member_list "$( get_policy "${rule}" "${2}" )" "${2}" )
+        do
+            wan_list="$( echo "${wan_list}" | sed -e "\$a $( get_wan "${member}" "${2}" )" -e '/^[ ]*$/d' )"
+        done
+    done
+    echo "${wan_list}"
+}
+
 get_ipset_total() {
     local retval="$( ipset -q list "${1}" | grep -Ec '^([0-9]{1,3}[\.]){3}[0-9]{1,3}' )"
     echo "${retval}"
@@ -358,23 +395,42 @@ get_ipset_total() {
 print_wan_ispip_item_num() {
     echo "$(lzdate) ${MY_LINE}"
     logger -p 1 "${MY_LINE}"
-    local index="0" name="" num="0" wan="0"
+    local buf="" index="0" name="" num="0" wan=""
+    [ -f "${MWAN3_FILENAME}" ] && buf="$( sed -e 's/[\t]/ /' -e 's/^[ ]*//g' -e 's/[ ][ ]*/ /g' -e 's/[ ]$//g' "${MWAN3_FILENAME}" 2> /dev/null )"
     until [ "${index}" -ge "${MAX_WAN_PORT}" ]
     do
         eval name="\${ISPIP_SET_${index}}"
         if [ "$( ipset -q -n list "${name}" )" ]; then
             num="$( get_ipset_total "${name}" )"
-            wan="$( get_wan_name "${index}" )"
-            printf "%s %-12s %-13s\t%s\n" "$(lzdate) [$$]:  " "${wan}" "${name}" "${num}" 
-            logger -p 1 "$( printf "%s %-6s\t%-13s%s\n" "[$$]:  " "${wan}" "${name}" "${num}" )"
+            wan="$( get_wan_list "${name}" "${buf}" )"
+            if [ -n "${wan}" ]; then
+                for wan in ${wan}
+                do
+                    printf "%s %-12s %-13s\t%s\n" "$(lzdate) [$$]:  " "${wan}" "${name}" "${num}" 
+                    logger -p 1 "$( printf "%s %-6s\t%-13s%s\n" "[$$]:  " "${wan}" "${name}" "${num}" )"
+                done
+            else
+                wan="$( get_wan_name "${index}" )"
+                printf "%s %-12s %-13s\t%s\n" "$(lzdate) [$$]:  " "${wan}" "${name}" "${num}" 
+                logger -p 1 "$( printf "%s %-6s\t%-13s%s\n" "[$$]:  " "${wan}" "${name}" "${num}" )"
+            fi
         fi
         let index++
     done
     if [ "$( ipset -q -n list "${ISPIP_SET_B}" )" ]; then
         num="$( get_ipset_total "${ISPIP_SET_B}" )"
-        wan="LB"
-        printf "%s %-12s %-13s\t%s\n" "$(lzdate) [$$]:  " "${wan}" "${ISPIP_SET_B}" "${num}" 
-        logger -p 1 "$( printf "%s %-6s\t%-13s%s\n" "[$$]:  " "${wan}" "${ISPIP_SET_B}" "${num}" )"
+        wan="$( get_wan_list "${ISPIP_SET_B}" "${buf}" )"
+        if [ -n "${wan}" ]; then
+            for wan in ${wan}
+            do
+                printf "%s %-12s %-13s\t%s\n" "$(lzdate) [$$]:  " "${wan}" "${ISPIP_SET_B}" "${num}" 
+                logger -p 1 "$( printf "%s %-6s\t%-13s%s\n" "[$$]:  " "${wan}" "${ISPIP_SET_B}" "${num}" )"
+            done
+        else
+            wan="LB"
+            printf "%s %-12s %-13s\t%s\n" "$(lzdate) [$$]:  " "${wan}" "${ISPIP_SET_B}" "${num}" 
+            logger -p 1 "$( printf "%s %-6s\t%-13s%s\n" "[$$]:  " "${wan}" "${ISPIP_SET_B}" "${num}" )"
+        fi
     fi
 }
 
