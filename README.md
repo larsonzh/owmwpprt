@@ -117,7 +117,6 @@ SSH终端下载安装命令
                         hk_cidr.txt           -- 香港地区运营商
                         mo_cidr.txt           -- 澳门地区运营商
                         tw_cidr.txt           -- 台湾地区运营商
-                 
 ```
 五、软件设置
 
