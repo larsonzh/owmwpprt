@@ -18,11 +18,9 @@ OpenWrt固件多WAN口策略路由分流工具
 
 **开发环境**
 
-固件版本    OpenWrt 22.03.2 r19803-9a599fee93 / LuCI openwrt-22.03 branch git-22.288.45147-96ec0cd
-
-内核版本    5.10.146
-
-虚拟机      VirtualBox 版本 6.1.36 r152435 (Qt5.6.2)
+    <ul><li>固件版本    OpenWrt 22.03.2 r19803-9a599fee93 / LuCI openwrt-22.03 branch git-22.288.45147-96ec0cd</li>
+    <li>内核版本    5.10.146</li>
+    <li>虚拟机      VirtualBox 版本 6.1.36 r152435 (Qt5.6.2)</li></ul>
 
 **主要功能**
 
