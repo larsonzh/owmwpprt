@@ -101,8 +101,19 @@ SSH终端下载命令
 
 5.在lzrules目录中，lzrules.sh为本工具的可执行脚本，若发现无运行权限，请赋予相关属性。data目录中保存的是10个网络运营商IPv4目标网段的数据文件，不要手工修改或删除。
 ```markdown
+        /lzrules/lzrules.sh -- 主运行脚本
         /lzrules/data/ 10个ISP运营商IPv4网段数据文件
-         lzrules.sh
+                        chinatelecom_cidr.txt -- 中国电信
+                        unicom_cnc_cidr.txt   -- 中国联通/网通
+                        cmcc_cidr.txt         -- 中国移动
+                        crtc_cidr.txt         -- 中国铁通
+                        cernet_cidr.txt       -- 中国教育网
+                        gwbn_cidr.txt         -- 长城宽带/鹏博士
+                        othernet_cidr.txt     -- 中国大陆其他运营商
+                        hk_cidr.txt           -- 香港地区运营商
+                        mo_cidr.txt           -- 澳门地区运营商
+                        tw_cidr.txt           -- 台湾地区运营商
+                 
 ```
 五、脚本软件设置
 
