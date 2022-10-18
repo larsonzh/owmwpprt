@@ -52,7 +52,7 @@ OpenWrt固件多WAN口策略路由分流工具
 
 二、路由器连接互联网，按前文所述下载安装5个必须的支撑软件。
 
-SSH终端下载命令
+SSH终端下载安装命令
 ```markdown
         okpg update
         opkg install mwan3 luci-app-mwan3 luci-i18n-mwan3-zh-cn
