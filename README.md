@@ -7,7 +7,7 @@ OpenWrt固件多WAN口策略路由分流工具
 
 本工具使用Shell脚本编写，可在OpenWrt固件的路由器上基于mwan3的强大功能，根据各网络运营商的互联网地址的分布，针对路由器上每个WAN口生成多个不同的目标网段数据集合，灵活绑定到mwan3的WAN口策略规则中，实现中国地区全网段的多WAN口数据流量分流控制策略。
 
-脚本使用的所有ISP网络运营商CIDR网段数据源自clang苍狼山庄（https://ispip.clang.cn/）的APNIC官方每日更新。
+脚本使用的所有ISP网络运营商CIDR网段数据源自clang苍狼山庄 https://ispip.clang.cn/ 整理的APNIC官方每日更新。
 
 脚本作为mwan3的配套软件，使用前请到OpenWrt中的“Software”界面内搜索并下载安装如下软件：
     <ul><li>mwan3</li>
