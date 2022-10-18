@@ -61,11 +61,9 @@ OpenWrt固件多WAN口策略路由分流工具
 2.使用WinSCP等工具将压缩包上传至路由器的任意目录。
 
 3.在SSH终端中使用解压缩命令在当前目录中将软件解压缩，生成lzrules-[version ID]目录（例如：lzrules-v1.0.0），进入其中可看到一个lzrules目录，此为脚本的工作目录。
-
-    ```markdown
-            tar -xzvf lzvpns-[version ID].tgz
-    ```
-
+```markdown
+        tar -xzvf lzvpns-[version ID].tgz
+```
 4.将lzrules目录复制或剪切粘贴到路由器中希望放置本脚本的位置，则完成本软件的安装。
 
 5.在lzrules目录中，lzrules.sh为本工具的可执行脚本，若发现无运行权限，请赋予相关属性。data目录中保存的是10个网络运营商IPv4目标网段的数据文件，不要手工修改或删除。
