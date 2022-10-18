@@ -246,17 +246,17 @@ cleaning_user_data() {
 get_wan_dev_if() {
     local dev="${1}"
     dev="$( echo "${2}" | awk -v flag=0 '$0 == "'"config interface \'${dev}\'"'" {flag=1; next} /^config/ {flag=0; next} flag && /^option device/ {print "'"${dev}"'",$3; exit}' \
-        | sed "s/[']//g" )"
+        | sed "s/[\']//g" )"
     [ -z "${dev}" ] && dev="${1}"
     echo "${dev}"
 }
 
 get_wan_dev_list() {
     local wan_list="" buf=""  wan="" wan_dev="" num="0"
-    [ -f "${MWAN3_FILENAME}" ] && wan_list="$( sed -e 's/[\t]/ /' -e 's/^[ ]*//g' -e 's/[ ][ ]*/ /g' -e 's/[ ]$//g' "${MWAN3_FILENAME}" 2> /dev/null \
+    [ -f "${MWAN3_FILENAME}" ] && wan_list="$( sed -e 's/[\t]/ /g' -e 's/^[ ]*//g' -e 's/[ ][ ]*/ /g' -e 's/[ ]$//g' "${MWAN3_FILENAME}" 2> /dev/null \
         | awk -v flag=0 -v port="" '/^config interface/ {flag=1; port=$3; next} /^config/ {flag=0; next} flag && $0 ~ "'"^option family \'ipv4\'"'" {print port}' \
         | sed "s/[\']//g" )"
-    [ -f "${HOST_NETWORK_FILENAME}" ] && buf="$( sed -e 's/[\t]/ /' -e 's/^[ ]*//g' -e 's/[ ][ ]*/ /g' -e 's/[ ]$//g' "${HOST_NETWORK_FILENAME}" 2> /dev/null )"
+    [ -f "${HOST_NETWORK_FILENAME}" ] && buf="$( sed -e 's/[\t]/ /g' -e 's/^[ ]*//g' -e 's/[ ][ ]*/ /g' -e 's/[ ]$//g' "${HOST_NETWORK_FILENAME}" 2> /dev/null )"
     WAN_DEV_LIST=""
     for wan in ${wan_list}
     do
@@ -396,7 +396,7 @@ print_wan_ispip_item_num() {
     echo "$(lzdate) ${MY_LINE}"
     logger -p 1 "${MY_LINE}"
     local buf="" index="0" name="" num="0" wan=""
-    [ -f "${MWAN3_FILENAME}" ] && buf="$( sed -e 's/[\t]/ /' -e 's/^[ ]*//g' -e 's/[ ][ ]*/ /g' -e 's/[ ]$//g' "${MWAN3_FILENAME}" 2> /dev/null )"
+    [ -f "${MWAN3_FILENAME}" ] && buf="$( sed -e 's/[\t]/ /g' -e 's/^[ ]*//g' -e 's/[ ][ ]*/ /g' -e 's/[ ]$//g' "${MWAN3_FILENAME}" 2> /dev/null )"
     until [ "${index}" -ge "${MAX_WAN_PORT}" ]
     do
         eval name="\${ISPIP_SET_${index}}"
