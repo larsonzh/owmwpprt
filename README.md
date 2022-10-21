@@ -196,6 +196,8 @@ WAN口的网段数据集名称在“用户运行策略自定义区”结束前�
 
 ![屏幕截图 2022-10-22 073123](https://user-images.githubusercontent.com/73221087/197305183-2f305ccb-bcf5-4b28-a514-77793d3446cd.png)
 
+![屏幕截图 2022-10-22 073916](https://user-images.githubusercontent.com/73221087/197305866-495ecd4a-d047-4b92-bbe5-c185b7d7de9d.png)
+
 ![屏幕截图 2022-10-18 210656](https://user-images.githubusercontent.com/73221087/197304519-23931bf8-3ba6-46ff-9159-47d8b10c2f91.png)
 
 六、脚本运行命令
