@@ -58,7 +58,7 @@ OpenWrt固件多WAN口策略路由分流工具
 
 ![屏幕截图 2022-10-22 042220](https://user-images.githubusercontent.com/73221087/197283255-13f3170e-4ccc-46db-8fca-57f3005730f1.png)
 
-![屏幕截图 2022-10-18 220133](https://user-images.githubusercontent.com/73221087/197277820-0f5bb660-ef54-4488-a6dd-8c711ce40380.png)
+![屏幕截图 2022-10-18 220133](https://user-images.githubusercontent.com/73221087/197303512-411599ce-dfc8-47db-bb34-14373d1bc3ef.png)
 
 二、路由器连接互联网，按前文所述下载安装5个必须的支撑软件。
 
@@ -102,7 +102,7 @@ SSH终端下载安装命令
 
 在路由器“网络-MultiWAN管理器”中选择“规则”选项卡，说明中提到规则指定哪些流量将使用特定的mwan3策略。
 
-如果之前有为IPv6协议设置的WAN口，则针对性的的设置一条IPv6流量的规则，“互联网协议”选择“仅IPv6”，“协议”选择“all”，“分配的策略”选择用于IPv6接口的那一条规则，其余项空置，意味之后所有IPv6流量只通过该WAN口。
+如果之前有为IPv6协议设置的WAN口（确定该口是接入IPv6流量的WAN口），则针对性的的设置一条IPv6流量的规则，“互联网协议”选择“仅IPv6”，“协议”选择“all”，“分配的策略”选择用于IPv6接口的那一条规则，其余项空置，意味之后所有IPv6流量只通过该WAN口。
 
 ![屏幕截图 2022-10-22 050744](https://user-images.githubusercontent.com/73221087/197289293-7a7f6d65-ea50-43e4-b60c-e1c47e9ba6f8.png)
 
