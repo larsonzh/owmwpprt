@@ -298,16 +298,17 @@ delete_ipsets() {
 }
 
 create_ipsets() {
+    [ ! -f "${MWAN3_FILENAME}" ] && return
     local index="0"
     until [ "${index}" -ge "${MAX_WAN_PORT}" ]
     do
-        if [ -f "${MWAN3_FILENAME}" ] && eval grep -q "^[^#]*\${ISPIP_SET_${index}}" "${MWAN3_FILENAME}" 2> /dev/null; then
+        if eval grep -q "^[^#]*\${ISPIP_SET_${index}}" "${MWAN3_FILENAME}" 2> /dev/null; then
             eval ipset -q create "\${ISPIP_SET_${index}}" nethash #--hashsize 65535
             eval ipset -q flush "\${ISPIP_SET_${index}}"
         fi
         let index++
     done
-    if [ -f "${MWAN3_FILENAME}" ] && grep -q "^[^#]*${ISPIP_SET_B}" "${MWAN3_FILENAME}" 2> /dev/null; then
+    if grep -q "^[^#]*${ISPIP_SET_B}" "${MWAN3_FILENAME}" 2> /dev/null; then
         ipset -q create "${ISPIP_SET_B}" nethash #--hashsize 65535
         ipset -q flush "${ISPIP_SET_B}"
     fi
