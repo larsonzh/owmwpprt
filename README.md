@@ -24,7 +24,7 @@ OpenWrt固件多WAN口策略路由分流工具
 **主要功能**
 
 <ul><li>最多可支持8个WAN口的分流控制。</li>
-<li>.可按如下10个覆盖全国的网络运营商IPv4目标网段的划分配置流量出口：</li>
+<li>可按如下10个覆盖全国的网络运营商IPv4目标网段的划分配置流量出口：</li>
     <ul><li>中国电信网段</li>
     <li>中国联通/网通网段</li>
     <li>中国移动网段</li>
@@ -62,8 +62,8 @@ SSH终端下载安装命令
 ```markdown
         okpg update
         opkg install mwan3 luci-app-mwan3 luci-i18n-mwan3-zh-cn
-        opkg install mwan3 wget-ssl
-        opkg install mwan3 curl
+        opkg install wget-ssl
+        opkg install curl
 ```
 三、mwan3设置
 
