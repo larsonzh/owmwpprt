@@ -1,5 +1,5 @@
 #!/bin/sh
-# lzrules.sh v1.0.0
+# lzrules.sh v1.0.1
 # By LZ 妙妙呜 (larsonzhang@gmail.com)
 
 # LZ RULES script for OpenWrt based router
@@ -170,7 +170,7 @@ ISP_NAME_9="TAIWAN"
 WAN_DEV_LIST=""
 
 # 版本号
-LZ_VERSION=v1.0.0
+LZ_VERSION=v1.0.1
 
 # 项目标识
 PROJECT_ID="lzrules"
