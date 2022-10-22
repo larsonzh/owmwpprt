@@ -124,7 +124,7 @@ SSH终端下载安装命令
 
 四、软件安装
 
-1.下载本工具的软件压缩包“lzrules-[version ID].tgz”（例如：lzrules-.tgz）。
+1.下载本工具的软件压缩包“lzrules-[version ID].tgz”（例如：lzrules-v1.0.1.tgz）。
 
 2.使用WinSCP等工具将压缩包上传至路由器的任意目录。
 
