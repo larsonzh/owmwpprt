@@ -105,31 +105,16 @@ RETRY_NUM=5
 # 条目中的“IP配置”字段内，形成绑定关系，即可最终通过OpenWrt内的mwan3软件完成多WAN口流量的策略路由。脚本
 # 的主要作用就是为mwan3生成可供其多个WAN口通道选择使用的目标流量网段数据集合，从而实现更为复杂的业务策略。
 
-# 第一WAN口国内网段数据集名称
+# WAN口国内网段数据集名称
+# 从上往下按第一WAN口、第二WAN口至第八WAN口的顺序排列，每个WAN口一个，可对应八个WAN口的使用。
 ISPIP_SET_0="ISPIP_SET_0"
-
-# 第二WAN口国内网段数据集名称
 ISPIP_SET_1="ISPIP_SET_1"
-
-# 第三WAN口国内网段数据集名称
 ISPIP_SET_2="ISPIP_SET_2"
-
-# 第四WAN口国内网段数据集名称
 ISPIP_SET_3="ISPIP_SET_3"
-
-# 第五WAN口国内网段数据集名称
 ISPIP_SET_4="ISPIP_SET_4"
-
-# 第六WAN口国内网段数据集名称
 ISPIP_SET_5="ISPIP_SET_5"
-
-# 第七WAN口国内网段数据集名称
 ISPIP_SET_6="ISPIP_SET_6"
-
-# 第八WAN口国内网段数据集名称
 ISPIP_SET_7="ISPIP_SET_7"
-
-# 多WAN口负载均衡数据集名称
 ISPIP_SET_B="ISPIP_SET_B"
 
 
