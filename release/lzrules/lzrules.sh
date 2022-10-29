@@ -224,6 +224,40 @@ MY_LINE="[$$]: ---------------------------------------------"
 
 lzdate() { eval echo "$( date +"%F %T" )"; }
 
+check_suport_evn() {
+    local retval="0"
+    if [ ! -f "${HOST_NETWORK_FILENAME}" ]; then
+        echo "$(lzdate)" [$$]: Profile "${HOST_NETWORK_FILENAME}" may be corrupt or missing.
+        logger -p 1 "[$$]: Profile ${HOST_NETWORK_FILENAME} may be corrupt or missing."
+        retval="1"
+    fi
+    if [ -z "$( opkg list-installed "mwan3" 2> /dev/null )" ] || ! which mwan3 > /dev/null 2>&1 || [ ! -f "${MWAN3_FILENAME}" ]; then
+        echo "$(lzdate)" [$$]: Package mwan3 is not installed or corrupt.
+        logger -p 1 "[$$]: Package mwan3 is not installed or corrupt."
+        retval="1"
+    fi
+    if [ -z "$( opkg list-installed "luci-app-mwan3" 2> /dev/null )" ]; then
+        echo "$(lzdate)" [$$]: Package luci-app-mwan3 is not installed or corrupt.
+        logger -p 1 "[$$]: Package luci-app-mwan3 is not installed or corrupt."
+        retval="1"
+    fi
+    if [ -z "$( opkg list-installed "curl" 2> /dev/null )" ] || ! which curl > /dev/null 2>&1; then
+        echo "$(lzdate)" [$$]: Package curl is not installed or corrupt.
+        logger -p 1 "[$$]: Package curl is not installed or corrupt."
+        retval="1"
+    fi
+    if [ -z "$( opkg list-installed "wget-ssl" 2> /dev/null )" ] || ! which wget > /dev/null 2>&1; then
+        echo "$(lzdate)" [$$]: Package wget-ssl is not installed or corrupt.
+        logger -p 1 "[$$]: Package wget-ssl is not installed or corrupt."
+        retval="1"
+    fi
+    if [ "${retval}" != "0" ]; then
+        echo "$(lzdate)" [$$]: This script cannot be run.
+        logger -p 1 "[$$]: This script cannot be run."
+    fi
+    return "${retval}"
+}
+
 cleaning_user_data() {
     ! echo "${ISP_0_WAN_PORT}" | grep -q '^[0-9]$' && ISP_0_WAN_PORT="0"
     ! echo "${ISP_1_WAN_PORT}" | grep -q '^[0-9]$' && ISP_1_WAN_PORT="0"
@@ -664,6 +698,7 @@ unload_system_boot() {
 }
 
 command_parsing() {
+    [ "${HAMMER}" != "${UNLOAD}" ] && ! check_suport_evn && return 1
     [ "${PARAM_TOTAL}" = "0" ] && return 0
     if [ "${HAMMER}" = "${UPDATE}" ]; then
         update_isp_data && return 0
