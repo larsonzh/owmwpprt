@@ -565,7 +565,7 @@ load_update_task() {
     if [ "${INTERVAL_DAY}" = "0" ]; then
         echo "$(lzdate)" [$$]: The scheduled update task was not started.
         logger -p 1 "[$$]: The scheduled update task was not started."
-        if crontab -l | grep -q "^[^#]*${PROJECT_ID}"; then
+        if crontab -l 2> /dev/null | grep -q "^[^#]*${PROJECT_ID}"; then
             sed -i "/^[^#]*${PROJECT_ID}/d" "${CRONTABS_ROOT_FILENAME}" > /dev/null 2>&1
             echo "$(lzdate)" [$$]: The previous scheduled update task was unloaded.
             logger -p 1 "[$$]: The previous scheduled update task was unloaded."
@@ -578,17 +578,17 @@ load_update_task() {
     [ "${timer_hour}" != "x" ] && [ "${timer_min}" = "x" ] && xmode="3"
     [ "${timer_hour}" = "x" ] && timer_hour="$( date +"%H" | sed 's/^[0]\([0-9]\)$/\1/g' )"
     [ "${timer_min}" = "x" ] && timer_min="$( date +"%M" | sed 's/^[0]\([0-9]\)$/\1/g' )"
-    num="$(  crontab -l | grep -c "^[^#]*${PROJECT_ID}" )"
+    num="$(  crontab -l 2> /dev/null | grep -c "^[^#]*${PROJECT_ID}" )"
     if [ "${num}" = "1" ] \
-        && ! crontab -l | awk -v xm="${xmode}" '!/^[ ]*[#]/ && $0 ~ "'"${PROJECT_ID}"'" {
+        && ! crontab -l 2> /dev/null | awk -v xm="${xmode}" '!/^[ ]*[#]/ && $0 ~ "'"${PROJECT_ID}"'" {
             if (xm == "0" && $1 == "'"${timer_min}"'" && $2 == "'"${timer_hour}"'" && $3 == "'"${interval_day}"'" && $4 == "*" && $5 == "*") exit 1
             if (xm == "1" && $3 == "'"${interval_day}"'" && $4 == "*" && $5 == "*") exit 1
             if (xm == "2" && $1 == "'"${timer_min}"'" && $3 == "'"${interval_day}"'" && $4 == "*" && $5 == "*") exit 1
             if (xm == "3" && $2 == "'"${timer_hour}"'" && $3 == "'"${interval_day}"'" && $4 == "*" && $5 == "*") exit 1
         }'; then
-        timer_min="$( crontab -l | awk '!/^[ ]*[#]/ && $0 ~ "'"${PROJECT_ID}"'" {print $1}' | sed 's/^[0-9]$/0&/g' )"
-        timer_hour="$( crontab -l | awk '!/^[ ]*[#]/ && $0 ~ "'"${PROJECT_ID}"'" {print $2}' )"
-        interval_day="$( crontab -l | awk '!/^[ ]*[#]/ && $0 ~ "'"${PROJECT_ID}"'" {print $3}' | cut -d '/' -f2 )"
+        timer_min="$( crontab -l 2> /dev/null | awk '!/^[ ]*[#]/ && $0 ~ "'"${PROJECT_ID}"'" {print $1}' | sed 's/^[0-9]$/0&/g' )"
+        timer_hour="$( crontab -l 2> /dev/null | awk '!/^[ ]*[#]/ && $0 ~ "'"${PROJECT_ID}"'" {print $2}' )"
+        interval_day="$( crontab -l 2> /dev/null | awk '!/^[ ]*[#]/ && $0 ~ "'"${PROJECT_ID}"'" {print $3}' | cut -d '/' -f2 )"
         [ "${interval_day}" = "1" ] && suffix_str=""
         echo "$(lzdate)" [$$]: "  Update ISP Data: ${timer_hour}:${timer_min} Every ${interval_day} day${suffix_str}"
         echo "$(lzdate) ${MY_LINE}"
@@ -600,12 +600,12 @@ load_update_task() {
     fi
     [ "${num}" != "0" ] && sed -i "/^[^#]*${PROJECT_ID}/d" "${CRONTABS_ROOT_FILENAME}" > /dev/null 2>&1
     sed -i "1i ${timer_min} ${timer_hour} ${interval_day} * * /bin/sh ${PATH_LZ}/${PROJECT_FILENAME} update > /dev/null 2>&1 # Added by LZ" "${CRONTABS_ROOT_FILENAME}" > /dev/null 2>&1
-    if ! crontab -l | grep -q "^[^#]*${PROJECT_ID}"; then
+    if ! crontab -l 2> /dev/null | grep -q "^[^#]*${PROJECT_ID}"; then
         echo "${timer_min} ${timer_hour} ${interval_day} * * /bin/sh ${PATH_LZ}/${PROJECT_FILENAME} update > /dev/null 2>&1 # Added by LZ" >> "${CRONTABS_ROOT_FILENAME}" 2> /dev/null
     fi
-    timer_min="$( crontab -l | awk '!/^[ ]*[#]/ && $0 ~ "'"${PROJECT_ID}"'" {print $1}' | sed 's/^[0-9]$/0&/g' )"
-    timer_hour="$( crontab -l | awk '!/^[ ]*[#]/ && $0 ~ "'"${PROJECT_ID}"'" {print $2}' )"
-    interval_day="$( crontab -l | awk '!/^[ ]*[#]/ && $0 ~ "'"${PROJECT_ID}"'" {print $3}' | cut -d '/' -f2 )"
+    timer_min="$( crontab -l 2> /dev/null | awk '!/^[ ]*[#]/ && $0 ~ "'"${PROJECT_ID}"'" {print $1}' | sed 's/^[0-9]$/0&/g' )"
+    timer_hour="$( crontab -l 2> /dev/null | awk '!/^[ ]*[#]/ && $0 ~ "'"${PROJECT_ID}"'" {print $2}' )"
+    interval_day="$( crontab -l 2> /dev/null | awk '!/^[ ]*[#]/ && $0 ~ "'"${PROJECT_ID}"'" {print $3}' | cut -d '/' -f2 )"
     [ "${interval_day}" = "1" ] && suffix_str=""
     echo "$(lzdate)" [$$]: "  Update ISP Data: ${timer_hour}:${timer_min} Every ${interval_day} day${suffix_str}"
     echo "$(lzdate) ${MY_LINE}"
@@ -616,7 +616,7 @@ load_update_task() {
 }
 
 unload_update_task() {
-    ! crontab -l | grep -q "^[^#]*${PROJECT_ID}" && {
+    ! crontab -l 2> /dev/null | grep -q "^[^#]*${PROJECT_ID}" && {
         echo "$(lzdate)" [$$]: No scheduled update task.
         logger -p 1 "[$$]: No scheduled update task."
         return
