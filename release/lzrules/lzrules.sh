@@ -120,7 +120,7 @@ ISPIP_SET_7="ISPIP_SET_7"
 ISPIP_SET_B="ISPIP_SET_B"
 
 # 启用用户自定义目标访问网址/网段数据集列表文件（custom_ipsets_lst.txt）
-## 0--启用；1--禁用；取值范围：0~1
+# 0--启用；1--禁用；取值范围：0~1
 # 缺省为禁用（1）。
 CUSTOM_IPSETS=1
 # 该列表文件位于项目路径内的data目录内，文本文件，名称和路径不可更改。
