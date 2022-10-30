@@ -216,6 +216,12 @@ check_suport_evn() {
         logger -p 1 "[$$]: Profile ${HOST_NETWORK_FILENAME} may be corrupt or missing."
         retval="1"
     fi
+    if ! which opkg > /dev/null 2>&1; then
+        echo "$(lzdate)" [$$]: No opkg, this script cannot be run.
+        logger -p 1 "[$$]: No opkg, this script cannot be run."
+        retval="1"
+        return "${retval}"
+    fi
     if [ -z "$( opkg list-installed "mwan3" 2> /dev/null )" ] || ! which mwan3 > /dev/null 2>&1 || [ ! -f "${MWAN3_FILENAME}" ]; then
         echo "$(lzdate)" [$$]: Package mwan3 is not installed or corrupt.
         logger -p 1 "[$$]: Package mwan3 is not installed or corrupt."
