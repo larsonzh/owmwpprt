@@ -196,6 +196,9 @@ ISPIP_FILE_URL_LIST="ispip_file_url_list.lst"
 # 公网IPv4地址查询网站域名
 PIPDN="whatismyip.akamai.com"
 
+# 用户自定义网址/网段数据集运行列表临时文件
+CUSTOM_IPSETS_LST="${PATH_TMP}/custom_ipsets.lst"
+
 # 脚本操作命令
 HAMMER="$( echo "${1}" | tr '[:A-Z:]' '[:a-z:]' )"
 UPDATE="update"
