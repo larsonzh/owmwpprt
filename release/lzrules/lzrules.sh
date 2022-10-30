@@ -340,7 +340,7 @@ get_wan_name() {
 }
 
 delete_ipsets() {
-    local index="0" item="" buf=""
+    local index="0"
     until [ "${index}" -ge "${MAX_WAN_PORT}" ]
     do
         eval ipset -q flush "\${ISPIP_SET_${index}}" && eval ipset -q destroy "\${ISPIP_SET_${index}}"
