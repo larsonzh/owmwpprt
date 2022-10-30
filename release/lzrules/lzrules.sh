@@ -191,7 +191,7 @@ PATH_TMP_DATA="${PATH_TMP}/download"
 UPDATE_ISPIP_DATA_DOWNLOAD_URL="https://ispip.clang.cn"
 
 # ISP网络运营商CIDR网段数据文件URL列表文件名
-ISPIP_FILE_URL_LIST="ispip_file_url_list.lst"
+ISPIP_FILE_URL_LIST="ispip_file_url.lst"
 
 # 公网IPv4地址查询网站域名
 PIPDN="whatismyip.akamai.com"
