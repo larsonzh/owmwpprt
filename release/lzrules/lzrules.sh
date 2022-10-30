@@ -340,13 +340,15 @@ get_wan_name() {
 }
 
 delete_ipsets() {
-    local index="0"
+    local index="0" item="" buf=""
     until [ "${index}" -ge "${MAX_WAN_PORT}" ]
     do
         eval ipset -q flush "\${ISPIP_SET_${index}}" && eval ipset -q destroy "\${ISPIP_SET_${index}}"
         let index++
     done
     ipset -q flush "${ISPIP_SET_B}" && ipset -q destroy "${ISPIP_SET_B}"
+    [ -f "${CUSTOM_IPSETS_TEMP_LST}" ] && sed -e '/^[ ]*[#]/d' -e 's/[#].*$//g' -e '/^[ ]*$/d' "${CUSTOM_IPSETS_TEMP_LST}" \
+        | awk '{if ($1 != "") system("ipset -q flush "$1" && ipset -q destroy "$1)}'
 }
 
 create_ipsets() {
