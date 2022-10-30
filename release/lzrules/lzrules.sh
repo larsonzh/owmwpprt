@@ -115,7 +115,27 @@ ISPIP_SET_4="ISPIP_SET_4"
 ISPIP_SET_5="ISPIP_SET_5"
 ISPIP_SET_6="ISPIP_SET_6"
 ISPIP_SET_7="ISPIP_SET_7"
+
+# 多WAN口负载均衡数据集名称
 ISPIP_SET_B="ISPIP_SET_B"
+
+# 启用用户自定义目标访问网址/网段数据集列表文件（custom_ipsets_lst.txt）
+## 0--启用；1--禁用；取值范围：0~1
+# 缺省为禁用（1）。
+CUSTOM_IPSETS=1
+# 该列表文件位于项目路径内的data目录内，文本文件，名称和路径不可更改。
+# 每一行可定义一个网址/网段数据集，可定义多个，数量不限。数据集可在mwan3的WAN口策略规则设置中使用。
+# 格式：
+# 数据集名称="全路径网址/网段数据文件名"
+# 注意：
+# 等号前后不能有空格；输入字符为英文半角，且遵从Linux变量名称、路径命名、文件命名的规则；全路径文件名要用英
+# 文半角双引号括起来。
+# 例如：
+# MY_IPSET_0="/mypath/my_ip_address_list_0.txt" # 我的第一个网址/网段数据集
+# MY_IPSET_1="/mypath/my_ip_address_list_1.txt"
+# 条目起始处加#符号，可忽略该条定义；在每条定义后面加空格，再添加#符号，后面可填写该条目的备注。
+# 网址/网段数据文件由用户自己编制和命名，内容格式可参考data目录内的运营是网段数据文件，每行为一个IPv4格式的
+# IP地址或CIDR网段，不能是域名形式的网址，可填写多个条目，数量不限。
 
 
 # ---------------------全局变量---------------------
@@ -196,8 +216,11 @@ ISPIP_FILE_URL_LIST="ispip_file_url.lst"
 # 公网IPv4地址查询网站域名
 PIPDN="whatismyip.akamai.com"
 
+# 用户自定义网址/网段数据集列表文件
+CUSTOM_IPSETS_LST="${PATH_DATA}/custom_ipsets_lst.txt"
+
 # 用户自定义网址/网段数据集运行列表临时文件
-CUSTOM_IPSETS_LST="${PATH_TMP}/custom_ipsets.lst"
+CUSTOM_IPSETS_TEMP_LST="${PATH_TMP}/custom_ipsets_temp.lst"
 
 # 脚本操作命令
 HAMMER="$( echo "${1}" | tr '[:A-Z:]' '[:a-z:]' )"
@@ -269,6 +292,7 @@ cleaning_user_data() {
     ! echo "${TIMER_MIN}" | grep -qE '^[0-9]$|^[1-5][0-9]$|^[xX]$' && TIMER_MIN="x"
     [ "${TIMER_MIN}" = "X" ] && TIMER_MIN="x"
     ! echo "${RETRY_NUM}" | grep -qE '^[0-9]$|^[1-9][0-9]$' && RETRY_NUM="5"
+    ! echo "${CUSTOM_IPSETS}" | grep -q '^[0-1]$' && CUSTOM_IPSETS="1"
 }
 
 get_wan_dev_if() {
