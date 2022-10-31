@@ -352,7 +352,6 @@ delete_ipsets() {
 }
 
 create_ipsets() {
-    [ ! -f "${MWAN3_FILENAME}" ] && return
     local index="0"
     until [ "${index}" -ge "${MAX_WAN_PORT}" ]
     do
@@ -366,6 +365,16 @@ create_ipsets() {
         ipset -q create "${ISPIP_SET_B}" nethash #--hashsize 65535
         ipset -q flush "${ISPIP_SET_B}"
     fi
+    [ ! -f "${CUSTOM_IPSETS_LST}" ] && return
+    local item="$( sed -e '/^[ ]*[#]/d' -e 's/^[ ]*//g' "${CUSTOM_IPSETS_LST}" 2> /dev/null \
+                    | grep -o '^[^ =#][^ =#]*[=][^ =#][^ =#]*' | grep -o '^[^=]*' )"
+    for item in $item
+    do
+        if grep -q "^[^#]*${item}" "${MWAN3_FILENAME}" 2> /dev/null; then
+            ipset -q create "${item}" nethash #--hashsize 65535
+            ipset -q flush "${item}"
+        fi
+    done
 }
 
 add_net_address_sets() {
