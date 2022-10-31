@@ -174,6 +174,9 @@ ISP_NAME_9="TAIWAN"
 # IPv4 WAN端口设备列表
 WAN_DEV_LIST=""
 
+# 用户自定义网址/网段数据集列表
+CUSTOM_IPSETS_LST=""
+
 # 版本号
 LZ_VERSION=v1.0.1
 
@@ -216,11 +219,11 @@ ISPIP_FILE_URL_LIST="ispip_file_url.lst"
 # 公网IPv4地址查询网站域名
 PIPDN="whatismyip.akamai.com"
 
-# 用户自定义网址/网段数据集列表文件
-CUSTOM_IPSETS_LST="${PATH_DATA}/custom_ipsets_lst.txt"
+# 用户自定义网址/网段数据集列表文件名
+CUSTOM_IPSETS_LST_FILENAME="${PATH_DATA}/custom_ipsets_lst.txt"
 
-# 用户自定义网址/网段数据集运行列表临时文件
-CUSTOM_IPSETS_TEMP_LST="${PATH_TMP}/custom_ipsets_temp.lst"
+# 用户自定义网址/网段数据集运行列表临时文件名
+CUSTOM_IPSETS_TEMP_LST_FILENAME="${PATH_TMP}/custom_ipsets_temp.lst"
 
 # 脚本操作命令
 HAMMER="$( echo "${1}" | tr '[:A-Z:]' '[:a-z:]' )"
@@ -347,7 +350,7 @@ delete_ipsets() {
         let index++
     done
     ipset -q flush "${ISPIP_SET_B}" && ipset -q destroy "${ISPIP_SET_B}"
-    [ -f "${CUSTOM_IPSETS_TEMP_LST}" ] && sed -e '/^[ ]*[#]/d' -e 's/[#].*$//g' -e '/^[ ]*$/d' "${CUSTOM_IPSETS_TEMP_LST}" \
+    [ -f "${CUSTOM_IPSETS_TEMP_LST_FILENAME}" ] && sed -e '/^[ ]*[#]/d' -e 's/[#].*$//g' -e '/^[ ]*$/d' "${CUSTOM_IPSETS_TEMP_LST_FILENAME}" \
         | awk '{if ($1 != "") system("ipset -q flush "$1" && ipset -q destroy "$1)}'
 }
 
@@ -365,10 +368,11 @@ create_ipsets() {
         ipset -q create "${ISPIP_SET_B}" nethash #--hashsize 65535
         ipset -q flush "${ISPIP_SET_B}"
     fi
-    [ ! -f "${CUSTOM_IPSETS_LST}" ] && return
-    local item="$( sed -e '/^[ ]*[#]/d' -e 's/^[ ]*//g' "${CUSTOM_IPSETS_LST}" 2> /dev/null \
-                    | grep -o '^[^ =#][^ =#]*[=][^ =#][^ =#]*' | grep -o '^[^=]*' )"
-    for item in $item
+    [ ! -f "${CUSTOM_IPSETS_LST_FILENAME}" ] && return
+    CUSTOM_IPSETS_LST="$( sed -e '/^[ ]*[#]/d' -e 's/^[ ]*//g' "${CUSTOM_IPSETS_LST_FILENAME}" 2> /dev/null \
+                        | grep -o '^[^ =#][^ =#]*[=][^ =#][^ =#]*' | awk -F '=' '{print $1,&2}' )"
+    local item=""
+    for item in $( echo "${CUSTOM_IPSETS_LST}" | awk '{print $1}' )
     do
         if grep -q "^[^#]*${item}" "${MWAN3_FILENAME}" 2> /dev/null; then
             ipset -q create "${item}" nethash #--hashsize 65535
