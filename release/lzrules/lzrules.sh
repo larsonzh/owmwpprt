@@ -128,8 +128,9 @@ CUSTOM_IPSETS=1
 # 格式：
 # 数据集名称="全路径网址/网段数据文件名"
 # 注意：
-# 等号前后不能有空格；输入字符为英文半角，且遵从Linux变量名称、路径命名、文件命名的规则；全路径文件名要用英
-# 文半角双引号括起来。
+# 数据集名称在整个路由器系统中具有唯一性，不能重复，否则会创建失败或影响系统中的其他代码运行；等号前后不能有
+# 空格；输入字符为英文半角，且符合Linux变量名称、路径命名、文件命名的规则；全路径文件名要用英文半角双引号括
+# 起来。
 # 例如：
 # MY_IPSET_0="/mypath/my_ip_address_list_0.txt" # 我的第一个网址/网段数据集
 # MY_IPSET_1="/mypath/my_ip_address_list_1.txt"
@@ -308,7 +309,7 @@ get_wan_dev_if() {
 
 get_wan_dev_list() {
     local wan_list="" buf=""  wan="" wan_dev="" num="0"
-    [ -f "${MWAN3_FILENAME}" ] && wan_list="$( sed -e 's/[\t]/ /g' -e 's/^[ ]*//g' -e 's/[ ][ ]*/ /g' -e 's/[ ]$//g' "${MWAN3_FILENAME}" 2> /dev/null \
+    wan_list="$( sed -e 's/[\t]/ /g' -e 's/^[ ]*//g' -e 's/[ ][ ]*/ /g' -e 's/[ ]$//g' "${MWAN3_FILENAME}" 2> /dev/null \
         | awk -v flag=0 -v port="" '/^config interface/ {flag=1; port=$3; next} /^config/ {flag=0; next} flag && $0 ~ "'"^option family \'ipv4\'"'" {print port}' \
         | sed "s/[\']//g" )"
     [ -f "${HOST_NETWORK_FILENAME}" ] && buf="$( sed -e 's/[\t]/ /g' -e 's/^[ ]*//g' -e 's/[ ][ ]*/ /g' -e 's/[ ]$//g' "${HOST_NETWORK_FILENAME}" 2> /dev/null )"
@@ -323,7 +324,7 @@ get_wan_dev_list() {
     num="$( echo "${WAN_DEV_LIST}" | wc -l )"
     until [ "${num}" -ge "${MAX_WAN_PORT}" ]
     do
-        WAN_DEV_LIST="$( echo "${WAN_DEV_LIST}" | sed -e "\$a wan${num}x eth${num}x" -e '/^[ ]*$/d' )"
+        WAN_DEV_LIST="$( echo "${WAN_DEV_LIST}" | sed -e "\$a wan${num}X eth${num}X" -e '/^[ ]*$/d' )"
         let num++
     done
 }
@@ -350,8 +351,10 @@ delete_ipsets() {
         let index++
     done
     ipset -q flush "${ISPIP_SET_B}" && ipset -q destroy "${ISPIP_SET_B}"
-    [ -f "${CUSTOM_IPSETS_TEMP_LST_FILENAME}" ] && sed -e '/^[ ]*[#]/d' -e 's/[#].*$//g' -e '/^[ ]*$/d' "${CUSTOM_IPSETS_TEMP_LST_FILENAME}" \
+    [ ! -f "${CUSTOM_IPSETS_TEMP_LST_FILENAME}" ] && return
+    sed -e '/^[ ]*[#]/d' -e 's/[#].*$//g' -e '/^[ ]*$/d' "${CUSTOM_IPSETS_TEMP_LST_FILENAME}" \
         | awk '{if ($1 != "") system("ipset -q flush "$1" && ipset -q destroy "$1)}'
+    sed -i '1,$d' "${CUSTOM_IPSETS_TEMP_LST_FILENAME}" > /dev/null 2>&1
 }
 
 create_ipsets() {
@@ -370,13 +373,13 @@ create_ipsets() {
     fi
     [ ! -f "${CUSTOM_IPSETS_LST_FILENAME}" ] && return
     CUSTOM_IPSETS_LST="$( sed -e '/^[ ]*[#]/d' -e 's/^[ ]*//g' "${CUSTOM_IPSETS_LST_FILENAME}" 2> /dev/null \
-                        | grep -o '^[^ =#][^ =#]*[=][^ =#][^ =#]*' | awk -F '=' '{print $1,&2}' )"
+                        | grep -o '^[^ =#][^ =#]*[=][^ =#][^ =#]*' )"
     local item=""
-    for item in $( echo "${CUSTOM_IPSETS_LST}" | awk '{print $1}' )
+    for item in ${CUSTOM_IPSETS_LST}
     do
-        if grep -q "^[^#]*${item}" "${MWAN3_FILENAME}" 2> /dev/null; then
-            ipset -q create "${item}" nethash #--hashsize 65535
-            ipset -q flush "${item}"
+        if grep -q "^[^#]*${item%=*}" "${MWAN3_FILENAME}" 2> /dev/null; then
+            ipset -q create "${item%=*}" nethash #--hashsize 65535
+            ipset -q flush "${item%=*}"
         fi
     done
 }
@@ -464,7 +467,7 @@ print_wan_ispip_item_num() {
     echo "$(lzdate) ${MY_LINE}"
     logger -p 1 "${MY_LINE}"
     local buf="" index="0" name="" num="0" wan=""
-    [ -f "${MWAN3_FILENAME}" ] && buf="$( sed -e 's/[\t]/ /g' -e 's/^[ ]*//g' -e 's/[ ][ ]*/ /g' -e 's/[ ]$//g' "${MWAN3_FILENAME}" 2> /dev/null )"
+    buf="$( sed -e 's/[\t]/ /g' -e 's/^[ ]*//g' -e 's/[ ][ ]*/ /g' -e 's/[ ]$//g' "${MWAN3_FILENAME}" 2> /dev/null )"
     until [ "${index}" -ge "${MAX_WAN_PORT}" ]
     do
         eval name="\${ISPIP_SET_${index}}"
@@ -500,6 +503,25 @@ print_wan_ispip_item_num() {
             logger -p 1 "$( printf "%s %-6s\t%-13s%s\n" "[$$]:  " "${wan}" "${ISPIP_SET_B}" "${num}" )"
         fi
     fi
+    [ -z "${CUSTOM_IPSETS_LST}" ] && return
+    echo "$(lzdate) ${MY_LINE}"
+    logger -p 1 "${MY_LINE}"
+    for name in ${CUSTOM_IPSETS_LST}
+    do
+        num="$( get_ipset_total "${name%=*}" )"
+        wan="$( get_wan_list "${name%=*}" "${buf}" )"
+        if [ -n "${wan}" ]; then
+            for wan in ${wan}
+            do
+                printf "%s %-12s %-13s\t%s\n" "$(lzdate) [$$]:  " "${wan}" "${name%=*}" "${num}" 
+                logger -p 1 "$( printf "%s %-6s\t%-13s%s\n" "[$$]:  " "${wan}" "${name%=*}" "${num}" )"
+            done
+        else
+            wan="wanX"
+            printf "%s %-12s %-13s\t%s\n" "$(lzdate) [$$]:  " "${wan}" "${name%=*}" "${num}" 
+            logger -p 1 "$( printf "%s %-6s\t%-13s%s\n" "[$$]:  " "${wan}" "${name%=*}" "${num}" )"
+        fi
+    done
 }
 
 print_wan_ip() {
@@ -545,6 +567,11 @@ load_ipsets() {
         printf "%s %s\t\t%s\t\t%s\n" "$(lzdate) [$$]:  " "${name}" "${wan}" "${num}" 
         logger -p 1 "$( printf "%s %-11s \t%-6s\t%s\n" "[$$]:  " "${name}" "${wan}" "${num}" )"
         let index++
+    done
+    for name in ${CUSTOM_IPSETS_LST}
+    do
+        add_net_address_sets "${name#*=}" "${name%=*}"
+        echo "${name%=*}" >> "${CUSTOM_IPSETS_TEMP_LST_FILENAME}" 2> /dev/null
     done
     print_wan_ispip_item_num
     print_wan_ip
@@ -740,6 +767,7 @@ command_parsing() {
         unload_update_task
         unload_system_boot
         delete_ipsets
+        rm -f "${CUSTOM_IPSETS_TEMP_LST_FILENAME}" > /dev/null 2>&1
         echo "$(lzdate)" [$$]: All ISP data have been unloaded.
         logger -p 1 "[$$]: All ISP data have been unloaded."
         return 1
