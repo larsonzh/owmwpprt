@@ -241,37 +241,41 @@ lzdate() { eval echo "$( date +"%F %T" )"; }
 
 check_suport_evn() {
     local retval="0"
-    if [ ! -f "${HOST_NETWORK_FILENAME}" ]; then
-        echo "$(lzdate)" [$$]: Profile "${HOST_NETWORK_FILENAME}" may be corrupt or missing.
-        logger -p 1 "[$$]: Profile ${HOST_NETWORK_FILENAME} may be corrupt or missing."
-        retval="1"
-    fi
-    if ! which opkg > /dev/null 2>&1; then
-        echo "$(lzdate)" [$$]: No opkg, this script cannot be run.
-        logger -p 1 "[$$]: No opkg, this script cannot be run."
-        retval="1"
-        return "${retval}"
-    fi
-    if [ -z "$( opkg list-installed "mwan3" 2> /dev/null )" ] || ! which mwan3 > /dev/null 2>&1 || [ ! -f "${MWAN3_FILENAME}" ]; then
-        echo "$(lzdate)" [$$]: Package mwan3 is not installed or corrupt.
-        logger -p 1 "[$$]: Package mwan3 is not installed or corrupt."
-        retval="1"
-    fi
-    if [ -z "$( opkg list-installed "luci-app-mwan3" 2> /dev/null )" ]; then
-        echo "$(lzdate)" [$$]: Package luci-app-mwan3 is not installed or corrupt.
-        logger -p 1 "[$$]: Package luci-app-mwan3 is not installed or corrupt."
-        retval="1"
-    fi
-    if [ -z "$( opkg list-installed "curl" 2> /dev/null )" ] || ! which curl > /dev/null 2>&1; then
-        echo "$(lzdate)" [$$]: Package curl is not installed or corrupt.
-        logger -p 1 "[$$]: Package curl is not installed or corrupt."
-        retval="1"
-    fi
-    if [ -z "$( opkg list-installed "wget-ssl" 2> /dev/null )" ] || ! which wget > /dev/null 2>&1; then
-        echo "$(lzdate)" [$$]: Package wget-ssl is not installed or corrupt.
-        logger -p 1 "[$$]: Package wget-ssl is not installed or corrupt."
-        retval="1"
-    fi
+    while true
+    do
+        if [ ! -f "${HOST_NETWORK_FILENAME}" ]; then
+            echo "$(lzdate)" [$$]: Profile "${HOST_NETWORK_FILENAME}" may be corrupt or missing.
+            logger -p 1 "[$$]: Profile ${HOST_NETWORK_FILENAME} may be corrupt or missing."
+            retval="1"
+        fi
+        if ! which opkg > /dev/null 2>&1; then
+            echo "$(lzdate)" [$$]: No opkg, this script cannot be run.
+            logger -p 1 "[$$]: No opkg."
+            retval="1"
+            break
+        fi
+        if [ -z "$( opkg list-installed "mwan3" 2> /dev/null )" ] || ! which mwan3 > /dev/null 2>&1 || [ ! -f "${MWAN3_FILENAME}" ]; then
+            echo "$(lzdate)" [$$]: Package mwan3 is not installed or corrupt.
+            logger -p 1 "[$$]: Package mwan3 is not installed or corrupt."
+            retval="1"
+        fi
+        if [ -z "$( opkg list-installed "luci-app-mwan3" 2> /dev/null )" ]; then
+            echo "$(lzdate)" [$$]: Package luci-app-mwan3 is not installed or corrupt.
+            logger -p 1 "[$$]: Package luci-app-mwan3 is not installed or corrupt."
+            retval="1"
+        fi
+        if [ -z "$( opkg list-installed "curl" 2> /dev/null )" ] || ! which curl > /dev/null 2>&1; then
+            echo "$(lzdate)" [$$]: Package curl is not installed or corrupt.
+            logger -p 1 "[$$]: Package curl is not installed or corrupt."
+            retval="1"
+        fi
+        if [ -z "$( opkg list-installed "wget-ssl" 2> /dev/null )" ] || ! which wget > /dev/null 2>&1; then
+            echo "$(lzdate)" [$$]: Package wget-ssl is not installed or corrupt.
+            logger -p 1 "[$$]: Package wget-ssl is not installed or corrupt."
+            retval="1"
+        fi
+        break
+    done
     if [ "${retval}" != "0" ]; then
         echo "$(lzdate)" [$$]: This script cannot be run.
         logger -p 1 "[$$]: This script cannot be run."
@@ -312,7 +316,7 @@ get_wan_dev_list() {
     wan_list="$( sed -e 's/[\t]/ /g' -e 's/^[ ]*//g' -e 's/[ ][ ]*/ /g' -e 's/[ ]$//g' "${MWAN3_FILENAME}" 2> /dev/null \
         | awk -v flag=0 -v port="" '/^config interface/ {flag=1; port=$3; next} /^config/ {flag=0; next} flag && $0 ~ "'"^option family \'ipv4\'"'" {print port}' \
         | sed "s/[\']//g" )"
-    [ -f "${HOST_NETWORK_FILENAME}" ] && buf="$( sed -e 's/[\t]/ /g' -e 's/^[ ]*//g' -e 's/[ ][ ]*/ /g' -e 's/[ ]$//g' "${HOST_NETWORK_FILENAME}" 2> /dev/null )"
+    buf="$( sed -e 's/[\t]/ /g' -e 's/^[ ]*//g' -e 's/[ ][ ]*/ /g' -e 's/[ ]$//g' "${HOST_NETWORK_FILENAME}" 2> /dev/null )"
     WAN_DEV_LIST=""
     for wan in ${wan_list}
     do
@@ -355,6 +359,7 @@ delete_ipsets() {
     sed -e '/^[ ]*[#]/d' -e 's/[#].*$//g' -e '/^[ ]*$/d' "${CUSTOM_IPSETS_TEMP_LST_FILENAME}" \
         | awk '{if ($1 != "") system("ipset -q flush "$1" && ipset -q destroy "$1)}'
     sed -i '1,$d' "${CUSTOM_IPSETS_TEMP_LST_FILENAME}" > /dev/null 2>&1
+    [ "${CUSTOM_IPSETS}" != "0" ] && rm -f "${CUSTOM_IPSETS_TEMP_LST_FILENAME}" > /dev/null 2>&1
 }
 
 create_ipsets() {
@@ -371,7 +376,7 @@ create_ipsets() {
         ipset -q create "${ISPIP_SET_B}" nethash #--hashsize 65535
         ipset -q flush "${ISPIP_SET_B}"
     fi
-    [ ! -f "${CUSTOM_IPSETS_LST_FILENAME}" ] && return
+    if [ "${CUSTOM_IPSETS}" != "0" ] || [ ! -f "${CUSTOM_IPSETS_LST_FILENAME}" ]; then return; fi;
     CUSTOM_IPSETS_LST="$( sed -e '/^[ ]*[#]/d' -e 's/^[ ]*//g' "${CUSTOM_IPSETS_LST_FILENAME}" 2> /dev/null \
                         | grep -o '^[^ =#][^ =#]*[=][^ =#][^ =#]*' )"
     local item=""
