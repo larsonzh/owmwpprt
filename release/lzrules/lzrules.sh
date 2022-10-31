@@ -575,7 +575,7 @@ load_ipsets() {
     done
     for name in ${CUSTOM_IPSETS_LST}
     do
-        add_net_address_sets "${name#*=}" "${name%=*}"
+        add_net_address_sets "$( echo "${name#*=}" | sed -e 's/\"//g' -e "s/\'//g" )" "${name%=*}"
         echo "${name%=*}" >> "${CUSTOM_IPSETS_TEMP_LST_FILENAME}" 2> /dev/null
     done
     print_wan_ispip_item_num
