@@ -526,7 +526,8 @@ get_ipset_total() {
 get_dname_item_total() {
     local retval="$( echo "${2}" | awk -v flag1=0 -v flag2=0 -v count=0 \
         '/^config ipset/ {if (count > 0) exit; else {flag1=1; flag2=0; next}}\
-         /^config/ {if (count > 0) exit; else {flag1=0; next}} flag1 && $0 ~ "'"^list name \'${1}\'"'" {flag2=1; next} \
+         /^config/ {if (count > 0) exit; else {flag1=0; next}} \
+         flag1 && $0 ~ "'"^list name \'${1}\'"'" {flag2=1; next} \
          flag2 && /^list domain/ {count++; next} END{print count}' )"
     echo "${retval}"
 }
