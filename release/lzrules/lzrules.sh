@@ -1,5 +1,5 @@
 #!/bin/sh
-# lzrules.sh v1.0.2
+# lzrules.sh v1.0.3
 # By LZ 妙妙呜 (larsonzhang@gmail.com)
 
 # LZ RULES script for OpenWrt based router
@@ -12,12 +12,14 @@
 # OpenWrt多WAN口策略路由分流脚本
 
 # 使用说明：
-# 1.脚本作为mwan3的配套软件使用，请提前到OpenWrt中的“Software”界面内搜索并下载安装如下软件：
+# 1.脚本作为mwan3的配套软件使用，请提前到OpenWrt中的“Software”界面内搜索并下载安装如下软件包：
 #    mwan3
 #    luci-app-mwan3
 #    luci-i18n-mwan3-zh-cn
 #    wget-ssl
 #    curl
+#    dnsmasq-full
+#   注：dnsmasq-full安装前需卸载删除原有的dnsmasq软件包。
 # 2.脚本中的WAN口按照OpenWrt“网络-MultiWAN管理器-接口”配置界面里的IPv4协议接口设定顺序排列。
 # 3.脚本中的WAN口序列中不包括IPv6协议的接口，IPv6协议的流量出口在“MultiWAN管理器”中配置出口策略规则。
 # 4.脚本已涵盖中国地区所有运营商IPv4目标网段，访问国外的流量出口在“MultiWAN管理器”中配置出口策略规则。
@@ -137,6 +139,8 @@ CUSTOM_IPSETS=1
 # 条目起始处加#符号，可忽略该条定义；在每条定义后面加空格，再添加#符号，后面可填写该条目的备注。
 # 网址/网段数据文件由用户自己编制和命名，内容格式可参考data目录内的运营是网段数据文件，每行为一个IPv4格式的
 # IP地址或CIDR网段，不能是域名形式的网址，可填写多个条目，数量不限。
+# 定义完数据集合列表文件和网址/网段数据文件后，需前往OpenWrt“网络-MultiWAN管理器-规则”界面内，为每个网址/
+# 网段数据集合按规则优先级添加和设置单独的出口规则，实现所需的流量出口策略。
 
 # 用户自定义目标访问域名数据集合列表文件（dname_ipsets_lst.txt）
 # 0--启用；1--禁用；取值范围：0~1
@@ -153,9 +157,10 @@ DNAME_IPSETS=1
 # MY_DOMAIN_NAME_IPSET_0 # 我的第一个域名数据集合
 # MY_DOMAIN_NAME_IPSET_1
 # 条目起始处加#符号，可忽略该条定义；在每条定义后面加空格，再添加#符号，后面可填写该条目的备注。
-# 此处仅作为全局变量在系统运行空间中定义和初始化域名数据集合，对域名数据集合进行生命周期管理。定义完成后请前
-# 往OpenWrt的“网络-DHCP/DNS-IP集”选项卡中，给数据集合关联所需域名，每个数据集合可包含多个域名，最后在mwan3
-# 的WAN口流量策略规则设置中实现按所访问的域名分配流量出口的策略。
+# 此处仅作为全局变量在系统运行空间中定义和初始化域名数据集合，对域名数据集合进行生命周期管理。
+# 定义完成后请前往OpenWrt的“网络-DHCP/DNS-IP集”选项卡中，给数据集合关联所需域名，每个数据集合可包含多个域名，
+# 最后在mwan3的WAN口流量策略规则中为每个域名数据集合按规则优先级添加和设置单独的出口规则，实现按所访问的域名
+# 分配流量出口的策略。
 
 
 # ---------------------全局变量---------------------
@@ -194,11 +199,14 @@ ISP_NAME_9="TAIWAN"
 # IPv4 WAN端口设备列表
 WAN_DEV_LIST=""
 
-# 用户自定义网址/网段数据集合列表
+# 用户自定义IPv4目标访问网址/网段数据集合列表
 CUSTOM_IPSETS_LST=""
 
+# 用户自定义目标访问域名数据集合列表
+DNAME_IPSETS_LST=""
+
 # 版本号
-LZ_VERSION=v1.0.2
+LZ_VERSION=v1.0.3
 
 # 项目标识
 PROJECT_ID="lzrules"
@@ -227,6 +235,9 @@ MWAN3_FILENAME="/etc/config/mwan3"
 # mwan3事件通告文件名
 MWAN3_NOTIFY_FILENAME="/etc/mwan3.user"
 
+# 主机dhcp配置文件名
+HOST_DHCP_FILENAME="/etc/config/dhcp"
+
 # 更新ISP网络运营商CIDR网段数据文件临时下载目录
 PATH_TMP_DATA="${PATH_TMP}/download"
 
@@ -239,10 +250,13 @@ ISPIP_FILE_URL_LIST="ispip_file_url.lst"
 # 公网IPv4地址查询网站域名
 PIPDN="whatismyip.akamai.com"
 
-# 用户自定义网址/网段数据集合列表文件名
+# 用户自定义IPv4网址/网段数据集合列表文件名
 CUSTOM_IPSETS_LST_FILENAME="${PATH_DATA}/custom_ipsets_lst.txt"
 
-# 用户自定义网址/网段数据集合运行列表临时文件名
+# 用户自定义目标访问域名数据集合列表文件名
+DNAME_IPSETS_LST_FILENAME="${PATH_DATA}/dname_ipsets_lst.txt"
+
+# 用户自定义数据集合运行列表临时文件名
 CUSTOM_IPSETS_TEMP_LST_FILENAME="${PATH_TMP}/custom_ipsets_temp.lst"
 
 # 脚本操作命令
@@ -265,6 +279,11 @@ check_suport_evn() {
         if [ ! -f "${HOST_NETWORK_FILENAME}" ]; then
             echo "$(lzdate)" [$$]: Profile "${HOST_NETWORK_FILENAME}" may be corrupt or missing.
             logger -p 1 "[$$]: Profile ${HOST_NETWORK_FILENAME} may be corrupt or missing."
+            retval="1"
+        fi
+        if [ ! -f "${HOST_DHCP_FILENAME}" ]; then
+            echo "$(lzdate)" [$$]: Profile "${HOST_DHCP_FILENAME}" may be corrupt or missing.
+            logger -p 1 "[$$]: Profile ${HOST_DHCP_FILENAME} may be corrupt or missing."
             retval="1"
         fi
         if ! which opkg > /dev/null 2>&1; then
@@ -291,6 +310,11 @@ check_suport_evn() {
         if [ -z "$( opkg list-installed "wget-ssl" 2> /dev/null )" ] || ! which wget > /dev/null 2>&1; then
             echo "$(lzdate)" [$$]: Package wget-ssl is not installed or corrupt.
             logger -p 1 "[$$]: Package wget-ssl is not installed or corrupt."
+            retval="1"
+        fi
+        if [ -z "$( opkg list-installed "dnsmasq-full" 2> /dev/null )" ] || ! which wget > /dev/null 2>&1; then
+            echo "$(lzdate)" [$$]: Package dnsmasq-full is not installed or corrupt.
+            logger -p 1 "[$$]: Package dnsmasq-full is not installed or corrupt."
             retval="1"
         fi
         break
@@ -385,7 +409,7 @@ delete_ipsets() {
 }
 
 create_ipsets() {
-    local index="0"
+    local index="0"  item=""
     until [ "${index}" -ge "${MAX_WAN_PORT}" ]
     do
         if eval grep -q "^[^#]*\${ISPIP_SET_${index}}" "${MWAN3_FILENAME}" 2> /dev/null; then
@@ -398,17 +422,26 @@ create_ipsets() {
         ipset -q create "${ISPIP_SET_B}" nethash #--hashsize 65535
         ipset -q flush "${ISPIP_SET_B}"
     fi
-    if [ "${CUSTOM_IPSETS}" != "0" ] || [ ! -f "${CUSTOM_IPSETS_LST_FILENAME}" ]; then return; fi;
-    CUSTOM_IPSETS_LST="$( sed -e '/^[ ]*[#]/d' -e 's/^[ ]*//g' "${CUSTOM_IPSETS_LST_FILENAME}" 2> /dev/null \
-                        | grep -o '^[^ =#][^ =#]*[=][^ =#][^ =#]*' )"
-    local item=""
-    for item in ${CUSTOM_IPSETS_LST}
-    do
-        if grep -q "^[^#]*${item%=*}" "${MWAN3_FILENAME}" 2> /dev/null; then
-            ipset -q create "${item%=*}" nethash #--hashsize 65535
-            ipset -q flush "${item%=*}"
-        fi
-    done
+    if [ "${CUSTOM_IPSETS}" = "0" ] && [ -f "${CUSTOM_IPSETS_LST_FILENAME}" ]; then
+        CUSTOM_IPSETS_LST="$( sed -e '/^[ ]*[#]/d' -e 's/^[ ]*//g' -e '/^[ \t]*$/d' "${CUSTOM_IPSETS_LST_FILENAME}" 2> /dev/null \
+                            | grep -o '^[^ =#][^ =#]*[=][^ =#][^ =#]*' )"
+        for item in ${CUSTOM_IPSETS_LST}
+        do
+            if grep -q "^[^#]*${item%=*}" "${MWAN3_FILENAME}" 2> /dev/null; then
+                ipset -q create "${item%=*}" nethash #--hashsize 65535
+                ipset -q flush "${item%=*}"
+            fi
+        done
+    fi
+    if [ "${DNAME_IPSETS}" = "0" ] && [ -f "${DNAME_IPSETS_LST_FILENAME}" ]; then
+        DNAME_IPSETS_LST="$( sed -e '/^[ ]*[#]/d' -e 's/^[ ]*//g' -e '/^[ \t]*$/d' "${DNAME_IPSETS_LST_FILENAME}" 2> /dev/null \
+                            | awk '{print $1}' )"
+        for item in ${DNAME_IPSETS_LST}
+        do
+            ipset -q create "${item}" nethash #--hashsize 65535
+            ipset -q flush "${item}"
+        done
+    fi
 }
 
 add_net_address_sets() {
@@ -490,6 +523,14 @@ get_ipset_total() {
     echo "${retval}"
 }
 
+get_dname_item_total() {
+    local retval="$( echo "${2}" | awk -v flag1=0 -v flag2=0 -v count=0 \
+        '/^config ipset/ {if (count > 0) exit; else {flag1=1; flag2=0; next}}\
+         /^config/ {if (count > 0) exit; else {flag1=0; next}} flag1 && $0 ~ "'"^list name \'${1}\'"'" {flag2=1; next} \
+         flag2 && /^list domain/ {count++; next} END{print count}' )"
+    echo "${retval}"
+}
+
 print_wan_ispip_item_num() {
     echo "$(lzdate) ${MY_LINE}"
     logger -p 1 "${MY_LINE}"
@@ -530,25 +571,47 @@ print_wan_ispip_item_num() {
             logger -p 1 "$( printf "%s %-6s\t%-13s%s\n" "[$$]:  " "${wan}" "${ISPIP_SET_B}" "${num}" )"
         fi
     fi
-    [ -z "${CUSTOM_IPSETS_LST}" ] && return
-    echo "$(lzdate) ${MY_LINE}"
-    logger -p 1 "${MY_LINE}"
-    for name in ${CUSTOM_IPSETS_LST}
-    do
-        num="$( get_ipset_total "${name%=*}" )"
-        wan="$( get_wan_list "${name%=*}" "${buf}" )"
-        if [ -n "${wan}" ]; then
-            for wan in ${wan}
-            do
+    if [ -n "${CUSTOM_IPSETS_LST}" ]; then
+        echo "$(lzdate) ${MY_LINE}"
+        logger -p 1 "${MY_LINE}"
+        for name in ${CUSTOM_IPSETS_LST}
+        do
+            num="$( get_ipset_total "${name%=*}" )"
+            wan="$( get_wan_list "${name%=*}" "${buf}" )"
+            if [ -n "${wan}" ]; then
+                for wan in ${wan}
+                do
+                    printf "%s %-12s %-13s\t%s\n" "$(lzdate) [$$]:  " "${wan}" "${name%=*}" "${num}" 
+                    logger -p 1 "$( printf "%s %-6s\t%-13s%s\n" "[$$]:  " "${wan}" "${name%=*}" "${num}" )"
+                done
+            else
+                wan="wanX"
                 printf "%s %-12s %-13s\t%s\n" "$(lzdate) [$$]:  " "${wan}" "${name%=*}" "${num}" 
                 logger -p 1 "$( printf "%s %-6s\t%-13s%s\n" "[$$]:  " "${wan}" "${name%=*}" "${num}" )"
-            done
-        else
-            wan="wanX"
-            printf "%s %-12s %-13s\t%s\n" "$(lzdate) [$$]:  " "${wan}" "${name%=*}" "${num}" 
-            logger -p 1 "$( printf "%s %-6s\t%-13s%s\n" "[$$]:  " "${wan}" "${name%=*}" "${num}" )"
-        fi
-    done
+            fi
+        done
+    fi
+    if [ -n "${DNAME_IPSETS_LST}" ]; then
+        echo "$(lzdate) ${MY_LINE}"
+        logger -p 1 "${MY_LINE}"
+        local dhcpbuf="$( sed -e 's/[\t]/ /g' -e 's/^[ ]*//g' -e 's/[ ][ ]*/ /g' -e 's/[ ]$//g' "${HOST_DHCP_FILENAME}" 2> /dev/null )"
+        for name in ${DNAME_IPSETS_LST}
+        do
+            num="$( get_dname_item_total "${name}" "${dhcpbuf}" )"
+            wan="$( get_wan_list "${name}" "${buf}" )"
+            if [ -n "${wan}" ]; then
+                for wan in ${wan}
+                do
+                    printf "%s %-12s %-13s\t%s\n" "$(lzdate) [$$]:  " "${wan}" "${name}" "${num}" 
+                    logger -p 1 "$( printf "%s %-6s\t%-13s%s\n" "[$$]:  " "${wan}" "${name}" "${num}" )"
+                done
+            else
+                wan="wanX"
+                printf "%s %-12s %-13s\t%s\n" "$(lzdate) [$$]:  " "${wan}" "${name}" "${num}" 
+                logger -p 1 "$( printf "%s %-6s\t%-13s%s\n" "[$$]:  " "${wan}" "${name}" "${num}" )"
+            fi
+        done
+    fi
 }
 
 print_wan_ip() {
@@ -600,6 +663,11 @@ load_ipsets() {
         add_net_address_sets "$( echo "${name#*=}" | sed -e 's/\"//g' -e "s/\'//g" )" "${name%=*}"
         echo "${name%=*}" >> "${CUSTOM_IPSETS_TEMP_LST_FILENAME}" 2> /dev/null
     done
+    for name in ${DNAME_IPSETS_LST}
+    do
+        echo "${name}" >> "${CUSTOM_IPSETS_TEMP_LST_FILENAME}" 2> /dev/null
+    done
+    [ -n "${DNAME_IPSETS_LST}" ] && /etc/init.d/dnsmasq restart > /dev/null 2>&1
     print_wan_ispip_item_num
     print_wan_ip
 }
