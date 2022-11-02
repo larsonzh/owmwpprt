@@ -152,6 +152,8 @@ SSH终端下载安装命令
                         hk_cidr.txt           -- 香港地区运营商
                         mo_cidr.txt           -- 澳门地区运营商
                         tw_cidr.txt           -- 台湾地区运营商
+                        custom_ipsets_lst.txt -- 用户自定义IPv4目标访问网址/网段数据集合列表文件
+                        dname_ipsets_lst.txt  -- 用户自定义目标访问域名数据集合列表文件
 ```
 五、软件设置
 
