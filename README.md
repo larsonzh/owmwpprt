@@ -15,6 +15,7 @@ OpenWrt固件多WAN口策略路由分流工具
     <li>luci-i18n-mwan3-zh-cn</li>
     <li>wget-ssl</li>
     <li>curl</li></ul>
+    <li>dnsmasq-full（注：安装前需卸载删除原有的dnsmasq软件包）</li></ul>
 
 **开发环境**
     <ul><li>固件版本    OpenWrt 22.03.2 r19803-9a599fee93 / LuCI openwrt-22.03 branch git-22.288.45147-96ec0cd</li>
@@ -70,6 +71,7 @@ SSH终端下载安装命令
         opkg install mwan3 luci-app-mwan3 luci-i18n-mwan3-zh-cn
         opkg install wget-ssl
         opkg install curl
+        opkg remove dnsmasq && opkg install dnsmasq-full
 ```
 三、mwan3设置
 
@@ -185,7 +187,11 @@ WAN口的网段数据集合名称在“用户运行策略自定义区”结束�
 
 ![屏幕截图 2022-10-22 061804](https://user-images.githubusercontent.com/73221087/197296818-3f16c933-b098-49d7-a35c-4c0c673cc982.png)
 
-4.上述设置完成后，即可在脚本所在目录内执行脚本启动命令，为mwan3加载规则数据：
+4.如需在mwan3的WAN口流量策略规则设置中使用自定义IPv4目标访问网址/网段数据集合，可在脚本的“用户运行策略自定义区”里启用“用户自定义IPv4目标访问网址/网段数据集合列表文件（custom_ipsets_lst.txt）”功能，使用方法参照其中的使用说明。
+
+5.如需在mwan3的WAN口流量策略规则设置中实现按所访问的域名分配流量出口的策略，可在脚本的“用户运行策略自定义区”里启用“用户自定义目标访问域名数据集合列表文件（dname_ipsets_lst.txt）”功能，使用方法参照其中的使用说明。
+
+6.上述设置完成后，即可在脚本所在目录内执行脚本启动命令，为mwan3加载规则数据：
 ```markdown
     脚本命令 (假设当前在lzrules目录)
         ./lzrules.sh
@@ -222,7 +228,9 @@ WAN口的网段数据集合名称在“用户运行策略自定义区”结束�
 
 2.在路由器“网络-MultiWAN管理器-规则”界面内，按“编辑”进入绑定过脚本网段数据集合的规则条目页面，“IP配置”字段下拉框中内将脚本数据集合名称改为“--请选择--”项，然后点击“保存”，即可解除绑定。依次类推，解除所有绑定关系。
 
+3.在路由器“网络-DHCP/DNS-IP集”选项卡界面内，逐条删除所有在脚本定义过的域名数据集合条目。
+
 ![屏幕截图 2022-10-22 065725](https://user-images.githubusercontent.com/73221087/197302924-cff2fd14-1fda-4e87-aa37-4a3cf3020613.png)
 
-3.删除lzrules目录，脚本软件至此全部清除。
+3.删除lzrules目录，脚本软件至此全部清除，OpenWrt固件设置恢复原状。
 
