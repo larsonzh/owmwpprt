@@ -3,7 +3,7 @@ OpenWrt Multi WAN Port Policy Routing Tool
 
 OpenWrt固件多WAN口策略路由分流工具
 
-**v1.0.2**
+**v1.0.3**
 
 本工具使用Shell脚本编写，可在OpenWrt固件的路由器上基于mwan3的强大功能，根据各网络运营商的互联网地址的分布，针对路由器上每个WAN口生成多个不同的目标网段数据集合，灵活绑定到mwan3的WAN口策略规则中，实现全网段的多WAN口数据流量分流控制策略。
 
@@ -128,11 +128,11 @@ SSH终端下载安装命令
 
 四、软件安装
 
-1.下载本工具的软件压缩包“lzrules-[version ID].tgz”（例如：lzrules-v1.0.2.tgz）。
+1.下载本工具的软件压缩包“lzrules-[version ID].tgz”（例如：lzrules-v1.0.3.tgz）。
 
 2.使用WinSCP等工具将压缩包上传至路由器的任意目录。
 
-3.在SSH终端中使用解压缩命令在当前目录中将软件解压缩，生成lzrules-[version ID]目录（例如：lzrules-v1.0.2），进入其中可看到一个lzrules目录，此为脚本的工作目录。
+3.在SSH终端中使用解压缩命令在当前目录中将软件解压缩，生成lzrules-[version ID]目录（例如：lzrules-v1.0.3），进入其中可看到一个lzrules目录，此为脚本的工作目录。
 ```markdown
         tar -xzvf lzrules-[version ID].tgz
 ```
