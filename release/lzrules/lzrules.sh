@@ -21,10 +21,10 @@
 # 2.脚本中的WAN口按照OpenWrt“网络-MultiWAN管理器-接口”配置界面里的IPv4协议接口设定顺序排列。
 # 3.脚本中的WAN口序列中不包括IPv6协议的接口，IPv6协议的流量出口在“MultiWAN管理器”中配置出口策略规则。
 # 4.脚本已涵盖中国地区所有运营商IPv4目标网段，访问国外的流量出口在“MultiWAN管理器”中配置出口策略规则。
-# 5.在脚本中配置完流量出口后，需在“MultiWAN管理器-规则”界面内，将WAN口数据集名称（如：ISPIP_SET_0），
+# 5.在脚本中配置完流量出口后，需在“MultiWAN管理器-规则”界面内，将WAN口数据集合名称（如：ISPIP_SET_0），
 #   填入相应WAN口策略规则条目中的“IP配置”字段内。填写时，在下拉框中选择“自定义”，在输入框中书写完毕后
-#   按回车键，即可完成数据集名称的输入。卸载脚本时，请在下拉框中选择“--请选择--”项，然后按页面中的“保
-#   存”，最后在“规则”界面中“保存并应用”，就可以解除该WAN口数据集与相应规则的绑定关系。
+#   按回车键，即可完成数据集合名称的输入。卸载脚本时，请在下拉框中选择“--请选择--”项，然后按页面中的“保
+#   存”，最后在“规则”界面中“保存并应用”，就可以解除该WAN口数据集合与相应规则的绑定关系。
 
 # BEIGIN
 
@@ -101,11 +101,11 @@ RETRY_NUM=5
 # 段数据文件同名的最新CIDR网段数据，下载后直接粘贴覆盖 /etc/lzrules/data/ 目录内同名数据文件，重启脚本即
 # 刻生效。
 
-# 完成出口设定后，需将WAN口的网段数据集名称（例如：ISPIP_SET_0）填入“MultiWAN管理器”内相应WAN口策略规则
-# 条目中的“IP配置”字段内，形成绑定关系，即可最终通过OpenWrt内的mwan3软件完成多WAN口流量的策略路由。脚本
-# 的主要作用就是为mwan3生成可供其多个WAN口通道选择使用的目标流量网段数据集合，从而实现更为复杂的业务策略。
+# 完成出口设定后，需将WAN口的网段数据集合名称（例如：ISPIP_SET_0）填入“MultiWAN管理器”内相应WAN口策略规
+# 则条目中的“IP配置”字段内，形成绑定关系，即可最终通过OpenWrt内的mwan3软件完成多WAN口流量的策略路由。脚本
+# 的主要作用就是为mwan3生成可供其多个WAN口通道选择使用的目标流量网段数据集合，从而实现更复杂的业务策略。
 
-# WAN口国内网段数据集名称
+# WAN口国内网段数据集合名称
 # 从上往下按第一WAN口、第二WAN口至第八WAN口的顺序排列，每个WAN口一个，可对应八个WAN口的使用。
 ISPIP_SET_0="ISPIP_SET_0"
 ISPIP_SET_1="ISPIP_SET_1"
@@ -116,33 +116,52 @@ ISPIP_SET_5="ISPIP_SET_5"
 ISPIP_SET_6="ISPIP_SET_6"
 ISPIP_SET_7="ISPIP_SET_7"
 
-# 多WAN口负载均衡数据集名称
+# 多WAN口负载均衡数据集合名称
 ISPIP_SET_B="ISPIP_SET_B"
 
-# 启用用户自定义目标访问网址/网段数据集列表文件（custom_ipsets_lst.txt）
+# 用户自定义IPv4目标访问网址/网段数据集合列表文件（custom_ipsets_lst.txt）
 # 0--启用；1--禁用；取值范围：0~1
 # 缺省为禁用（1）。
 CUSTOM_IPSETS=1
 # 该列表文件位于项目路径内的data目录内，文本文件，名称和路径不可更改。
-# 每一行可定义一个网址/网段数据集，可定义多个，数量不限。数据集可在mwan3的WAN口策略规则设置中使用。
+# 每一行可定义一个网址/网段数据集合，可定义多条，数量不限。数据集合可在mwan3的WAN口流量策略规则设置中使用。
 # 格式：
-# 数据集名称="全路径网址/网段数据文件名"
+# 数据集合名称="全路径网址/网段数据文件名"
 # 注意：
-# 数据集名称在整个路由器系统中具有唯一性，不能重复，否则会创建失败或影响系统中的其他代码运行；等号前后不能有
-# 空格；输入字符为英文半角，且符合Linux变量名称、路径命名、文件命名的规则；全路径文件名要用英文半角双引号括
-# 起来。
+# 数据集合名称在整个路由器系统中具有唯一性，不能重复，否则会创建失败或影响系统中的其他代码运行；等号前后不能
+# 有空格；输入字符为英文半角，且符合Linux变量名称、路径命名、文件命名的规则；全路径文件名要用英文半角双引号
+# 括起来。
 # 例如：
-# MY_IPSET_0="/mypath/my_ip_address_list_0.txt" # 我的第一个网址/网段数据集
+# MY_IPSET_0="/mypath/my_ip_address_list_0.txt" # 我的第一个网址/网段数据集合
 # MY_IPSET_1="/mypath/my_ip_address_list_1.txt"
 # 条目起始处加#符号，可忽略该条定义；在每条定义后面加空格，再添加#符号，后面可填写该条目的备注。
 # 网址/网段数据文件由用户自己编制和命名，内容格式可参考data目录内的运营是网段数据文件，每行为一个IPv4格式的
 # IP地址或CIDR网段，不能是域名形式的网址，可填写多个条目，数量不限。
 
+# 用户自定义目标访问域名数据集合列表文件（dname_ipsets_lst.txt）
+# 0--启用；1--禁用；取值范围：0~1
+# 缺省为禁用（1）。
+DNAME_IPSETS=1
+# 该列表文件位于项目路径内的data目录内，文本文件，名称和路径不可更改。
+# 每一行可定义一个域名数据集合，可定义多个，数量不限。数据集合可在mwan3的WAN口流量策略规则设置中使用。
+# 格式：
+# 数据集合名称
+# 注意：
+# 数据集合名称在整个路由器系统中具有唯一性，不能重复，否则会创建失败或影响系统中的其他代码运行；输入字符为英
+# 文半角，且符合Linux变量名称命名的规则。
+# 例如：
+# MY_DOMAIN_NAME_IPSET_0 # 我的第一个域名数据集合
+# MY_DOMAIN_NAME_IPSET_1
+# 条目起始处加#符号，可忽略该条定义；在每条定义后面加空格，再添加#符号，后面可填写该条目的备注。
+# 此处仅作为全局变量在系统运行空间中定义和初始化域名数据集合，对域名数据集合进行生命周期管理。定义完成后请前
+# 往OpenWrt的“网络-DHCP/DNS-IP集”选项卡中，给数据集合关联所需域名，每个数据集合可包含多个域名，最后在mwan3
+# 的WAN口流量策略规则设置中实现按所访问的域名分配流量出口的策略。
+
 
 # ---------------------全局变量---------------------
 
 # WAN口最大支持数量
-# 每个IPv4 WAN口对应一个国内网段数据集
+# 每个IPv4 WAN口对应一个国内网段数据集合
 MAX_WAN_PORT="8"
 
 # 国内ISP网络运营商CIDR网段数据文件总数
@@ -175,7 +194,7 @@ ISP_NAME_9="TAIWAN"
 # IPv4 WAN端口设备列表
 WAN_DEV_LIST=""
 
-# 用户自定义网址/网段数据集列表
+# 用户自定义网址/网段数据集合列表
 CUSTOM_IPSETS_LST=""
 
 # 版本号
@@ -220,10 +239,10 @@ ISPIP_FILE_URL_LIST="ispip_file_url.lst"
 # 公网IPv4地址查询网站域名
 PIPDN="whatismyip.akamai.com"
 
-# 用户自定义网址/网段数据集列表文件名
+# 用户自定义网址/网段数据集合列表文件名
 CUSTOM_IPSETS_LST_FILENAME="${PATH_DATA}/custom_ipsets_lst.txt"
 
-# 用户自定义网址/网段数据集运行列表临时文件名
+# 用户自定义网址/网段数据集合运行列表临时文件名
 CUSTOM_IPSETS_TEMP_LST_FILENAME="${PATH_TMP}/custom_ipsets_temp.lst"
 
 # 脚本操作命令
@@ -301,6 +320,7 @@ cleaning_user_data() {
     [ "${TIMER_MIN}" = "X" ] && TIMER_MIN="x"
     ! echo "${RETRY_NUM}" | grep -qE '^[0-9]$|^[1-9][0-9]$' && RETRY_NUM="5"
     ! echo "${CUSTOM_IPSETS}" | grep -q '^[0-1]$' && CUSTOM_IPSETS="1"
+    ! echo "${DNAME_IPSETS}" | grep -q '^[0-1]$' && DNAME_IPSETS="1"
 }
 
 get_wan_dev_if() {
@@ -359,7 +379,9 @@ delete_ipsets() {
     sed -e '/^[ ]*[#]/d' -e 's/[#].*$//g' -e '/^[ ]*$/d' "${CUSTOM_IPSETS_TEMP_LST_FILENAME}" \
         | awk '{if ($1 != "") system("ipset -q flush "$1" && ipset -q destroy "$1)}'
     sed -i '1,$d' "${CUSTOM_IPSETS_TEMP_LST_FILENAME}" > /dev/null 2>&1
-    [ "${CUSTOM_IPSETS}" != "0" ] && rm -f "${CUSTOM_IPSETS_TEMP_LST_FILENAME}" > /dev/null 2>&1
+    if [ "${CUSTOM_IPSETS}" != "0" ] && [ "${DNAME_IPSETS}" != "0" ]; then
+        rm -f "${CUSTOM_IPSETS_TEMP_LST_FILENAME}" > /dev/null 2>&1
+    fi
 }
 
 create_ipsets() {
