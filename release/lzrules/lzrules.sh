@@ -1,5 +1,5 @@
 #!/bin/sh
-# lzrules.sh v1.0.3
+# lzrules.sh v1.0.4
 # By LZ 妙妙呜 (larsonzhang@gmail.com)
 
 # LZ RULES script for OpenWrt based router
@@ -209,7 +209,7 @@ CUSTOM_IPSETS_LST=""
 DNAME_IPSETS_LST=""
 
 # 版本号
-LZ_VERSION=v1.0.3
+LZ_VERSION=v1.0.4
 
 # 项目标识
 PROJECT_ID="lzrules"
