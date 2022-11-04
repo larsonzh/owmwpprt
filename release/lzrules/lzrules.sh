@@ -417,13 +417,13 @@ create_ipsets() {
     until [ "${index}" -ge "${MAX_WAN_PORT}" ]
     do
         if eval grep -q "^[^#]*\${ISPIP_SET_${index}}" "${MWAN3_FILENAME}" 2> /dev/null; then
-            eval ipset -q create "\${ISPIP_SET_${index}}" nethash #--hashsize 65535
+            eval ipset -q create "\${ISPIP_SET_${index}}" hash:net #--hashsize 65535
             eval ipset -q flush "\${ISPIP_SET_${index}}"
         fi
         let index++
     done
     if grep -q "^[^#]*${ISPIP_SET_B}" "${MWAN3_FILENAME}" 2> /dev/null; then
-        ipset -q create "${ISPIP_SET_B}" nethash #--hashsize 65535
+        ipset -q create "${ISPIP_SET_B}" hash:net #--hashsize 65535
         ipset -q flush "${ISPIP_SET_B}"
     fi
     if [ "${CUSTOM_IPSETS}" = "0" ] && [ -f "${CUSTOM_IPSETS_LST_FILENAME}" ]; then
@@ -432,7 +432,7 @@ create_ipsets() {
         for item in ${CUSTOM_IPSETS_LST}
         do
             if grep -q "^[^#]*${item%=*}" "${MWAN3_FILENAME}" 2> /dev/null; then
-                ipset -q create "${item%=*}" nethash #--hashsize 65535
+                ipset -q create "${item%=*}" hash:net #--hashsize 65535
                 ipset -q flush "${item%=*}"
             fi
         done
@@ -442,7 +442,7 @@ create_ipsets() {
                             | awk '{print $1}' )"
         for item in ${DNAME_IPSETS_LST}
         do
-            ipset -q create "${item}" nethash #--hashsize 65535
+            ipset -q create "${item}" hash:ip #--hashsize 65535
             ipset -q flush "${item}"
         done
     fi
@@ -450,7 +450,7 @@ create_ipsets() {
 
 add_net_address_sets() {
     if [ ! -f "${1}" ] || [ -z "${2}" ]; then return; fi;
-    ipset -q create "${2}" nethash #--hashsize 65535
+    ipset -q create "${2}" hash:net #--hashsize 65535
     sed -e 's/\(^[^#]*\)[#].*$/\1/g' -e '/^$/d' -e 's/LZ/  /g' -e 's/del/   /g' \
     -e 's/\(\([0-9]\{1,3\}[\.]\)\{3\}[0-9]\{1,3\}\([\/][0-9]\{1,2\}\)\{0,1\}\)/LZ\1LZ/g' \
     -e 's/^.*\(LZ\([0-9]\{1,3\}[\.]\)\{3\}[0-9]\{1,3\}\([\/][0-9]\{1,2\}\)\{0,1\}LZ\).*$/\1/g' \
@@ -529,15 +529,15 @@ get_ipset_total() {
 
 get_dname_item_total() {
     local retval="0"
-    local lst="$( echo "${2}" | awk -v flag1=0 -v flag2=0 -v count=0 \
-        '/^config ipset/ {flag1=1; flag2=0; count++; next} \
-        /^config/ {flag1=0; next} \
-        flag1 && /^list name/ {if ($3 =="'"\'${1}\'"'" ) flag2=1; next} \
-        flag1 && /^list domain/ {print $3,count,flag2; next} END{print count}' )"
-    if [ -n "${lst}" ]; then
-        retval="$( echo "${lst}" | awk '$3 == "1" {print $2; exit}' )"
+    local buf="$( echo "${2}" | awk -v flag=0 -v count=0 \
+        '/^config ipset/ {flag=1; count++; next} \
+        /^config/ {flag=0; next} \
+        flag && $0 ~ "'"^list name \'${1}\'"'" {print "list name",count; next} \
+        flag && /^list domain/ {print $3,count; next}' )"
+    if [ -n "${buf}" ]; then
+        retval="$( echo "${buf}" | awk '/^list name/ {print $3; exit}' )"
         if [ -n "${retval}" ]; then
-            retval="$( echo "${lst}" | awk '$2 == "'"${retval}"'" {print $1}' | awk '{
+            retval="$( echo "${buf}" | awk '$2 == "'"${retval}"'" {print $1}' | awk '{
                 system("nslookup -type=a "$1" > /dev/null 2>&1")
             } END{print NR}' )"
         else
