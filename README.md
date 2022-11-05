@@ -3,7 +3,7 @@ OpenWrt Multi WAN Port Policy Routing Tool
 
 OpenWrt固件多WAN口策略路由分流工具
 
-**v1.0.5**
+**v1.0.6**
 
 本工具使用Shell脚本编写，可在OpenWrt固件的路由器上基于mwan3的强大功能，根据各网络运营商的互联网地址的分布，针对路由器上每个WAN口生成多个不同的目标网段数据集合，灵活绑定到mwan3的WAN口策略规则中，实现全网段的多WAN口数据流量分流控制策略。
 
@@ -128,11 +128,11 @@ SSH终端下载安装命令
 
 四、软件安装
 
-1.下载本工具的软件压缩包“lzrules-[version ID].tgz”（例如：lzrules-v1.0.5.tgz）。
+1.下载本工具的软件压缩包“lzrules-[version ID].tgz”（例如：lzrules-v1.0.6.tgz）。
 
 2.使用WinSCP等工具将压缩包上传至路由器的任意目录。
 
-3.在SSH终端中使用解压缩命令在当前目录中将软件解压缩，生成lzrules-[version ID]目录（例如：lzrules-v1.0.5），进入其中可看到一个lzrules目录，此为脚本的工作目录。
+3.在SSH终端中使用解压缩命令在当前目录中将软件解压缩，生成lzrules-[version ID]目录（例如：lzrules-v1.0.6），进入其中可看到一个lzrules目录，此为脚本的工作目录。
 ```markdown
         tar -xzvf lzrules-[version ID].tgz
 ```
@@ -195,9 +195,11 @@ WAN口的网段数据集合名称在“用户运行策略自定义区”结束�
 
 6.上述设置完成后，即可在脚本所在目录内执行脚本启动命令，为mwan3加载规则数据：
 ```markdown
-    脚本命令 (假设当前在lzrules目录)
+    脚本启动命令 (假设当前在lzrules目录)
         ./lzrules.sh
 ```
+提示：修改脚本工作参数、系统网络端口配置、mwan3配置参数后，需重新启动脚本。
+
 脚本启动过程中将会在SSH终端显示网段流量出口配置信息，各运营是网段数据条目数、各出口用于网段数据匹配过滤的条目数，各出口的网口IP地址，公网出口IP地址等信息，同时将信息传入系统日志中，会自动在系统计划任务中添加定时更新任务，并将脚本添加进系统启动项中。
 
 ![屏幕截图 2022-10-22 063041](https://user-images.githubusercontent.com/73221087/197298966-6ec58f18-dab9-40f2-ac08-5de28bd7a79a.png)
@@ -217,6 +219,7 @@ WAN口的网段数据集合名称在“用户运行策略自定义区”结束�
         更新数据文件         ./lzrules.sh update
         卸载运行数据         ./lzrules.sh unload
 ```
+
 七、软件卸载
 
 1.首先执行脚本的“卸载运行数据”命令：
