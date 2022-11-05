@@ -14,7 +14,7 @@ OpenWrt固件多WAN口策略路由分流工具
     <li>luci-app-mwan3</li>
     <li>luci-i18n-mwan3-zh-cn</li>
     <li>wget-ssl</li>
-    <li>curl</li></ul>
+    <li>curl</li>
     <li>dnsmasq-full（注：安装前需卸载删除原有的dnsmasq软件包）</li></ul>
 
 **开发环境**
