@@ -1,5 +1,5 @@
 #!/bin/sh
-# lzrules.sh v1.0.5
+# lzrules.sh v1.0.6
 # By LZ 妙妙呜 (larsonzhang@gmail.com)
 
 # LZ RULES script for OpenWrt based router
@@ -209,7 +209,7 @@ CUSTOM_IPSETS_LST=""
 DNAME_IPSETS_LST=""
 
 # 版本号
-LZ_VERSION=v1.0.5
+LZ_VERSION=v1.0.6
 
 # 项目标识
 PROJECT_ID="lzrules"
@@ -352,27 +352,27 @@ cleaning_user_data() {
 
 get_wan_dev_if() {
     local dev="${1}"
-    dev="$( echo "${2}" | awk -v flag=0 '$0 == "'"config interface \'${dev}\'"'" {flag=1; next} /^config/ {flag=0; next} flag && /^option device/ {print "'"${dev}"'",$3; exit}' \
-        | sed "s/[\']//g" )"
+    dev="$( uci get "${HOST_NETWORK_FILENAME}.${dev}.device" 2> /dev/null )"
     [ -z "${dev}" ] && dev="${1}"
     echo "${dev}"
 }
 
 get_wan_dev_list() {
-    local wan_list="" buf=""  wan="" wan_dev="" num="0"
+    local wan_list=""  wan="" wan_dev="" num="0"
     wan_list="$( sed -e 's/[\t]/ /g' -e 's/^[ ]*//g' -e 's/[ ][ ]*/ /g' -e 's/[ ]$//g' "${MWAN3_FILENAME}" 2> /dev/null \
         | awk -v flag=0 -v port="" '/^config interface/ {flag=1; port=$3; next} /^config/ {flag=0; next} flag && $0 ~ "'"^option family \'ipv4\'"'" {print port}' \
         | sed "s/[\']//g" )"
-    buf="$( sed -e 's/[\t]/ /g' -e 's/^[ ]*//g' -e 's/[ ][ ]*/ /g' -e 's/[ ]$//g' "${HOST_NETWORK_FILENAME}" 2> /dev/null )"
+#    wan_list="$( uci show "${MWAN3_FILENAME}" 2> /dev/null | awk -F '=' '$2 == "interface" {print $1}' \
+#        | awk -F '.' '{system("'"uci show ${MWAN3_FILENAME}\."'"$2"'"\.family 2> /dev/null"'")}' | awk -F '.' '$3 ~ "'"\'ipv4\'"'" {print $2}' )"
     WAN_DEV_LIST=""
     for wan in ${wan_list}
     do
-        wan_dev="$( get_wan_dev_if "${wan}" "${buf}" )"
-        WAN_DEV_LIST="$( echo "${WAN_DEV_LIST}" | sed -e "\$a ${wan_dev}" -e '/^[ ]*$/d' )"
+        wan_dev="$( get_wan_dev_if "${wan}" )"
+        WAN_DEV_LIST="$( echo "${WAN_DEV_LIST}" | sed -e "\$a ${wan} ${wan_dev}" -e '/^[ ]*$/d' )"
         let num++
         [ "${num}" -ge "${MAX_WAN_PORT}" ] && break
     done
-    WAN_AVAL_NUM="$( echo "${WAN_DEV_LIST}" | wc -l )"
+    WAN_AVAL_NUM="${num}"
     num="${WAN_AVAL_NUM}"
     until [ "${num}" -ge "${MAX_WAN_PORT}" ]
     do
@@ -486,39 +486,12 @@ get_ipv4_data_file_item_total() {
     echo "${retval}"
 }
 
-get_wan() {
-    local wan="$( echo "${2}" | awk -v flag=0 '$0 == "'"config member \'${1}\'"'" {flag=1; next} /^config/ {flag=0; next} flag && /^option interface/ {print $3; exit}' \
-        | sed "s/[\']//g" )"
-    echo "${wan}"
-}
-
-get_member_list() {
-    local member_list="$( echo "${2}" | awk -v flag=0 '$0 == "'"config policy \'${1}\'"'" {flag=1; next} /^config/ {flag=0; next} flag && /^list use_member/ {print $3}' \
-        | sed "s/[\']//g" )"
-    echo "${member_list}"
-}
-
-get_policy() {
-    local policy="$( echo "${2}" | awk -v flag=0 '$0 == "'"config rule \'${1}\'"'" {flag=1; next} /^config/ {flag=0; next} flag && /^option use_policy/ {print $3; exit}' \
-        | sed "s/[\']//g" )"
-    echo "${policy}"
-}
-
-get_rule_list() {
-    local rule_list="$( echo "${2}" | awk -v flag=0 -v rule="" '/^config rule/ {flag=1; rule=$3; next} /^config/ {flag=0; next} flag && $0 == "'"option ipset \'${1}\'"'" {print rule}' \
-        | sed "s/[\']//g" )"
-    echo "${rule_list}"
-}
-
 get_wan_list() {
-    local wan_list="" rule="" member=""
-    for rule in $( get_rule_list "${1}" "${2}" )
-    do
-        for member in $( get_member_list "$( get_policy "${rule}" "${2}" )" "${2}" )
-        do
-            wan_list="$( echo "${wan_list}" | sed -e "\$a $( get_wan "${member}" "${2}" )" -e '/^[ ]*$/d' )"
-        done
-    done
+    local wan_list="$( uci show "${MWAN3_FILENAME}" 2> /dev/null \
+            | awk -F '.' '$0 ~ "'"ipset=\'${1}\'"'" && $2 != "" {system("'"uci get ${MWAN3_FILENAME}."'"$2".use_policy 2> /dev/null")}' \
+            | awk '$1 != "" {system("'"uci get ${MWAN3_FILENAME}."'"$1".use_member 2> /dev/null")}' \
+            | sed -e 's/[ \t][ \t]*/\n/g'  -e '/^[ \t]*$/d' \
+            | awk '$1 != "" {system("'"uci get ${MWAN3_FILENAME}."'"$1".interface  2> /dev/null")}' )"
     echo "${wan_list}"
 }
 
@@ -527,37 +500,16 @@ get_ipset_total() {
     echo "${retval}"
 }
 
-get_dname_item_total() {
-    local retval="0"
-    local buf="$( echo "${2}" | awk -v flag=0 -v count=0 \
-        '/^config ipset/ {flag=1; count++; next} \
-        /^config/ {flag=0; next} \
-        flag && $0 ~ "'"^list name \'${1}\'"'" {print "list name",count; next} \
-        flag && /^list domain/ {print $3,count; next}' )"
-    if [ -n "${buf}" ]; then
-        retval="$( echo "${buf}" | awk '/^list name/ {print $3; exit}' )"
-        if [ -n "${retval}" ]; then
-            retval="$( echo "${buf}" | awk '$2 == "'"${retval}"'" {print $1}' | awk '{
-                system("nslookup -type=a "$1" > /dev/null 2>&1")
-            } END{print NR}' )"
-        else
-            retval="0"
-        fi
-    fi
-    echo "${retval}"
-}
-
 print_wan_ispip_item_num() {
     echo "$(lzdate) ${MY_LINE}"
     logger -p 1 "${MY_LINE}"
-    local buf="" index="0" name="" num="0" wan="" item_total="0"
-    buf="$( sed -e 's/[\t]/ /g' -e 's/^[ ]*//g' -e 's/[ ][ ]*/ /g' -e 's/[ ]$//g' "${MWAN3_FILENAME}" 2> /dev/null )"
+    local index="0" name="" num="0" wan=""
     until [ "${index}" -ge "${MAX_WAN_PORT}" ]
     do
         eval name="\${ISPIP_SET_${index}}"
         if [ "$( ipset -q -n list "${name}" )" ]; then
             num="$( get_ipset_total "${name}" )"
-            wan="$( get_wan_list "${name}" "${buf}" )"
+            wan="$( get_wan_list "${name}" )"
             if [ -n "${wan}" ]; then
                 for wan in ${wan}
                 do
@@ -575,7 +527,7 @@ print_wan_ispip_item_num() {
     done
     if [ "$( ipset -q -n list "${ISPIP_SET_B}" )" ]; then
         num="$( get_ipset_total "${ISPIP_SET_B}" )"
-        wan="$( get_wan_list "${ISPIP_SET_B}" "${buf}" )"
+        wan="$( get_wan_list "${ISPIP_SET_B}" )"
         if [ -n "${wan}" ]; then
             for wan in ${wan}
             do
@@ -594,7 +546,7 @@ print_wan_ispip_item_num() {
         for name in ${CUSTOM_IPSETS_LST}
         do
             num="$( get_ipset_total "${name%=*}" )"
-            wan="$( get_wan_list "${name%=*}" "${buf}" )"
+            wan="$( get_wan_list "${name%=*}" )"
             if [ -n "${wan}" ]; then
                 for wan in ${wan}
                 do
@@ -611,22 +563,24 @@ print_wan_ispip_item_num() {
     if [ -n "${DNAME_IPSETS_LST}" ]; then
         echo "$(lzdate) ${MY_LINE}"
         logger -p 1 "${MY_LINE}"
-        local dhcpbuf="$( sed -e 's/[\t]/ /g' -e 's/^[ ]*//g' -e 's/[ ][ ]*/ /g' -e 's/[ ]$//g' "${HOST_DHCP_FILENAME}" 2> /dev/null )"
+        local buf=""
         for name in ${DNAME_IPSETS_LST}
         do
-            item_total="$( get_dname_item_total "${name}" "${dhcpbuf}" )"
+            buf="$( uci show "${HOST_DHCP_FILENAME}" 2> /dev/null | awk -F '.' '$0 ~ "'"name=\'${name}\'"'" {print $2}' )"
+            [ -n "${buf}" ] && buf="$( uci get "${HOST_DHCP_FILENAME}.${buf}.domain" 2> /dev/null | awk '{print NF; exit}' )"
+            [ -z "${buf}" ] && buf="0"
             num="$( get_ipset_total "${name}" )"
-            wan="$( get_wan_list "${name}" "${buf}" )"
+            wan="$( get_wan_list "${name}" )"
             if [ -n "${wan}" ]; then
                 for wan in ${wan}
                 do
-                    printf "%s %-12s %-13s\t%s%s\n" "$(lzdate) [$$]:  " "${wan}" "${name}" "${num}" "(${item_total})"
-                    logger -p 1 "$( printf "%s %-6s\t%-13s%s%s\n" "[$$]:  " "${wan}" "${name}" "${num}" "(${item_total})" )"
+                    printf "%s %-12s %-13s\t%s%s\n" "$(lzdate) [$$]:  " "${wan}" "${name}" "${num}" "(${buf})"
+                    logger -p 1 "$( printf "%s %-6s\t%-13s%s%s\n" "[$$]:  " "${wan}" "${name}" "${num}" "(${buf})" )"
                 done
             else
                 wan="wanX"
-                printf "%s %-12s %-13s\t%s%s\n" "$(lzdate) [$$]:  " "${wan}" "${name}" "${num}" "(${item_total})"
-                logger -p 1 "$( printf "%s %-6s\t%-13s%s%s\n" "[$$]:  " "${wan}" "${name}" "${num}" "(${item_total})" )"
+                printf "%s %-12s %-13s\t%s%s\n" "$(lzdate) [$$]:  " "${wan}" "${name}" "${num}" "(${buf})"
+                logger -p 1 "$( printf "%s %-6s\t%-13s%s%s\n" "[$$]:  " "${wan}" "${name}" "${num}" "(${buf})" )"
             fi
         done
     fi
@@ -649,7 +603,9 @@ print_wan_ip() {
             }' \
             | awk -Fn '{print $1}' \
             | awk '{
-                strbuf=sprintf("%s\t%-15s\t%s","'"[$$]:   ${ifx}"'",$2,$3)
+                wanip="No Public IP"
+                if ($3 != "") wanip=$3
+                strbuf=sprintf("%s\t%-15s\t%s","'"[$$]:   ${ifx}"'",$2,wanip)
                 printf("%s %s\n","'"$(lzdate)"'",strbuf)
                 system("logger -p 1 "strbuf)
             }'
@@ -657,7 +613,7 @@ print_wan_ip() {
 }
 
 load_ipsets() {
-    local index="0" port="0" name="" num="0" wan="0"
+    local index="0" port="0" name="" num="0" wan="0" buf=""
     until [ "${index}" -ge "${ISP_TOTAL}" ]
     do
         eval port="\${ISP_${index}_WAN_PORT}"
@@ -681,11 +637,15 @@ load_ipsets() {
         add_net_address_sets "$( echo "${name#*=}" | sed -e 's/\"//g' -e "s/\'//g" )" "${name%=*}"
         echo "${name%=*}" >> "${CUSTOM_IPSETS_TEMP_LST_FILENAME}" 2> /dev/null
     done
+    [ -n "${DNAME_IPSETS_LST}" ] && /etc/init.d/dnsmasq restart > /dev/null 2>&1
     for name in ${DNAME_IPSETS_LST}
     do
+        buf="$( uci show "${HOST_DHCP_FILENAME}" 2> /dev/null | awk -F '.' '$0 ~ "'"name=\'${name}\'"'" {print $2}' )"
+        [ -n "${buf}" ] && uci get "${HOST_DHCP_FILENAME}.${buf}.domain" 2> /dev/null \
+                                | sed -e 's/[ \t][ \t]*/\n/g' -e '/^[ \t]*$/d' \
+                                | awk '{system("nslookup -type=a "$1" > /dev/null 2>&1")}'
         echo "${name}" >> "${CUSTOM_IPSETS_TEMP_LST_FILENAME}" 2> /dev/null
     done
-    [ -n "${DNAME_IPSETS_LST}" ] && /etc/init.d/dnsmasq restart > /dev/null 2>&1
     print_wan_ispip_item_num
     print_wan_ip
 }
