@@ -260,7 +260,7 @@ CUSTOM_IPSETS_LST_FILENAME="${PATH_DATA}/custom_ipsets_lst.txt"
 DNAME_IPSETS_LST_FILENAME="${PATH_DATA}/dname_ipsets_lst.txt"
 
 # 用户自定义数据集合运行列表临时文件名
-CUSTOM_IPSETS_TEMP_LST_FILENAME="${PATH_TMP}/custom_ipsets_temp.lst"
+CUSTOM_IPSETS_TMP_LST_FILENAME="${PATH_TMP}/custom_ipsets_tmp.lst"
 
 # 脚本操作命令
 HAMMER="$( echo "${1}" | tr '[:A-Z:]' '[:a-z:]' )"
@@ -403,12 +403,12 @@ delete_ipsets() {
         let index++
     done
     ipset -q flush "${ISPIP_SET_B}" && ipset -q destroy "${ISPIP_SET_B}"
-    [ ! -f "${CUSTOM_IPSETS_TEMP_LST_FILENAME}" ] && return
-    sed -e '/^[ ]*[#]/d' -e 's/[#].*$//g' -e '/^[ ]*$/d' "${CUSTOM_IPSETS_TEMP_LST_FILENAME}" \
+    [ ! -f "${CUSTOM_IPSETS_TMP_LST_FILENAME}" ] && return
+    sed -e '/^[ ]*[#]/d' -e 's/[#].*$//g' -e '/^[ ]*$/d' "${CUSTOM_IPSETS_TMP_LST_FILENAME}" \
         | awk '{if ($1 != "") system("ipset -q flush "$1" && ipset -q destroy "$1)}'
-    sed -i '1,$d' "${CUSTOM_IPSETS_TEMP_LST_FILENAME}" > /dev/null 2>&1
+    sed -i '1,$d' "${CUSTOM_IPSETS_TMP_LST_FILENAME}" > /dev/null 2>&1
     if [ "${CUSTOM_IPSETS}" != "0" ] && [ "${DNAME_IPSETS}" != "0" ]; then
-        rm -f "${CUSTOM_IPSETS_TEMP_LST_FILENAME}" > /dev/null 2>&1
+        rm -f "${CUSTOM_IPSETS_TMP_LST_FILENAME}" > /dev/null 2>&1
     fi
 }
 
@@ -635,7 +635,7 @@ load_ipsets() {
     for name in ${CUSTOM_IPSETS_LST}
     do
         add_net_address_sets "$( echo "${name#*=}" | sed -e 's/\"//g' -e "s/\'//g" )" "${name%=*}"
-        echo "${name%=*}" >> "${CUSTOM_IPSETS_TEMP_LST_FILENAME}" 2> /dev/null
+        echo "${name%=*}" >> "${CUSTOM_IPSETS_TMP_LST_FILENAME}" 2> /dev/null
     done
     [ -n "${DNAME_IPSETS_LST}" ] && /etc/init.d/dnsmasq restart > /dev/null 2>&1
     for name in ${DNAME_IPSETS_LST}
@@ -644,8 +644,10 @@ load_ipsets() {
         [ -n "${buf}" ] && uci get "${HOST_DHCP_FILENAME}.${buf}.domain" 2> /dev/null \
                                 | sed -e 's/[ \t][ \t]*/\n/g' -e '/^[ \t]*$/d' \
                                 | awk '{system("nslookup -type=a "$1" > /dev/null 2>&1")}'
-        echo "${name}" >> "${CUSTOM_IPSETS_TEMP_LST_FILENAME}" 2> /dev/null
+        echo "${name}" >> "${CUSTOM_IPSETS_TMP_LST_FILENAME}" 2> /dev/null
     done
+    [ -z "${CUSTOM_IPSETS_LST}" ] && [ -z "${DNAME_IPSETS_LST}" ] && [ -f "${CUSTOM_IPSETS_TMP_LST_FILENAME}" ] \
+        && rm -f "${CUSTOM_IPSETS_TMP_LST_FILENAME}" > /dev/null 2>&1
     print_wan_ispip_item_num
     print_wan_ip
 }
@@ -840,7 +842,7 @@ command_parsing() {
         unload_update_task
         unload_system_boot
         delete_ipsets
-        rm -f "${CUSTOM_IPSETS_TEMP_LST_FILENAME}" > /dev/null 2>&1
+        [ -f "${CUSTOM_IPSETS_TMP_LST_FILENAME}" ] && rm -f "${CUSTOM_IPSETS_TMP_LST_FILENAME}" > /dev/null 2>&1
         echo "$(lzdate)" [$$]: All ISP data have been unloaded.
         logger -p 1 "[$$]: All ISP data have been unloaded."
         return 1
