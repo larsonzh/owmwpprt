@@ -427,7 +427,7 @@ create_ipsets() {
         ipset -q flush "${ISPIP_SET_B}"
     fi
     if [ "${CUSTOM_IPSETS}" = "0" ] && [ -f "${CUSTOM_IPSETS_LST_FILENAME}" ]; then
-        CUSTOM_IPSETS_LST="$( sed -e '/^[ ]*[#]/d' -e 's/^[ ]*//g' -e '/^[ \t]*$/d' "${CUSTOM_IPSETS_LST_FILENAME}" 2> /dev/null \
+        CUSTOM_IPSETS_LST="$( sed -e 's/[ \t][  \t]*/ /g' -e '/^[ ]*[#]/d' -e 's/^[ ]//g' -e '/^[ ]*$/d' "${CUSTOM_IPSETS_LST_FILENAME}" 2> /dev/null \
                             | grep -o '^[^ =#][^ =#]*[=][^ =#][^ =#]*' )"
         for item in ${CUSTOM_IPSETS_LST}
         do
@@ -438,7 +438,7 @@ create_ipsets() {
         done
     fi
     if [ "${DNAME_IPSETS}" = "0" ] && [ -f "${DNAME_IPSETS_LST_FILENAME}" ]; then
-        DNAME_IPSETS_LST="$( sed -e '/^[ ]*[#]/d' -e 's/^[ ]*//g' -e '/^[ \t]*$/d' "${DNAME_IPSETS_LST_FILENAME}" 2> /dev/null \
+        DNAME_IPSETS_LST="$( sed -e 's/[ \t][  \t]*/ /g' -e '/^[ ]*[#]/d' -e 's/^[ ]//g' -e '/^[ ]*$/d' "${DNAME_IPSETS_LST_FILENAME}" 2> /dev/null \
                             | awk '{print $1}' )"
         for item in ${DNAME_IPSETS_LST}
         do
