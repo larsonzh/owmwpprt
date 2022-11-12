@@ -1,5 +1,5 @@
 #!/bin/sh
-# lzrules.sh v1.0.6
+# lzrules.sh v1.0.7
 # By LZ 妙妙呜 (larsonzhang@gmail.com)
 
 # LZ RULES script for OpenWrt based router
@@ -209,7 +209,7 @@ CUSTOM_IPSETS_LST=""
 DNAME_IPSETS_LST=""
 
 # 版本号
-LZ_VERSION=v1.0.6
+LZ_VERSION=v1.0.7
 
 # 项目标识
 PROJECT_ID="lzrules"
@@ -566,7 +566,7 @@ print_wan_ispip_item_num() {
         local buf=""
         for name in ${DNAME_IPSETS_LST}
         do
-            buf="$( uci show "${HOST_DHCP_FILENAME}" 2> /dev/null | awk -F '.' '$0 ~ "'"name=\'${name}\'"'" {print $2}' )"
+            buf="$( uci show "${HOST_DHCP_FILENAME}" 2> /dev/null | awk -F '.' '$2 ~ /^@ipset/ && $3 ~ "'"^name=.*\'${name}\'"'" {print $2}' )"
             [ -n "${buf}" ] && buf="$( uci get "${HOST_DHCP_FILENAME}.${buf}.domain" 2> /dev/null | awk '{print NF; exit}' )"
             [ -z "${buf}" ] && buf="0"
             num="$( get_ipset_total "${name}" )"
@@ -640,7 +640,7 @@ load_ipsets() {
     [ -n "${DNAME_IPSETS_LST}" ] && /etc/init.d/dnsmasq restart > /dev/null 2>&1
     for name in ${DNAME_IPSETS_LST}
     do
-        buf="$( uci show "${HOST_DHCP_FILENAME}" 2> /dev/null | awk -F '.' '$0 ~ "'"name=\'${name}\'"'" {print $2}' )"
+        buf="$( uci show "${HOST_DHCP_FILENAME}" 2> /dev/null | awk -F '.' '$2 ~ /^@ipset/ && $3 ~ "'"^name=.*\'${name}\'"'" {print $2}' )"
         [ -n "${buf}" ] && uci get "${HOST_DHCP_FILENAME}.${buf}.domain" 2> /dev/null \
                                 | sed -e 's/[ \t][ \t]*/\n/g' -e '/^[ \t]*$/d' \
                                 | awk '{system("nslookup -type=a "$1" > /dev/null 2>&1")}'
