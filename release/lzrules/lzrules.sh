@@ -1,5 +1,5 @@
 #!/bin/sh
-# lzrules.sh v1.0.7
+# lzrules.sh v1.0.8
 # By LZ 妙妙呜 (larsonzhang@gmail.com)
 
 # LZ RULES script for OpenWrt based router
@@ -209,7 +209,7 @@ CUSTOM_IPSETS_LST=""
 DNAME_IPSETS_LST=""
 
 # 版本号
-LZ_VERSION=v1.0.7
+LZ_VERSION=v1.0.8
 
 # 项目标识
 PROJECT_ID="lzrules"
@@ -417,13 +417,13 @@ create_ipsets() {
     until [ "${index}" -ge "${MAX_WAN_PORT}" ]
     do
         if eval grep -q "^[^#]*\${ISPIP_SET_${index}}" "${MWAN3_FILENAME}" 2> /dev/null; then
-            eval ipset -q create "\${ISPIP_SET_${index}}" hash:net #--hashsize 65535
+            eval ipset -q create "\${ISPIP_SET_${index}}" hash:net maxelem 4294967295 #--hashsize 1024 mexleme 65536
             eval ipset -q flush "\${ISPIP_SET_${index}}"
         fi
         let index++
     done
     if grep -q "^[^#]*${ISPIP_SET_B}" "${MWAN3_FILENAME}" 2> /dev/null; then
-        ipset -q create "${ISPIP_SET_B}" hash:net #--hashsize 65535
+        ipset -q create "${ISPIP_SET_B}" hash:net maxelem 4294967295 #--hashsize 1024 mexleme 65536
         ipset -q flush "${ISPIP_SET_B}"
     fi
     if [ "${CUSTOM_IPSETS}" = "0" ] && [ -f "${CUSTOM_IPSETS_LST_FILENAME}" ]; then
@@ -432,7 +432,7 @@ create_ipsets() {
         for item in ${CUSTOM_IPSETS_LST}
         do
             if grep -q "^[^#]*${item%=*}" "${MWAN3_FILENAME}" 2> /dev/null; then
-                ipset -q create "${item%=*}" hash:net #--hashsize 65535
+                ipset -q create "${item%=*}" hash:net maxelem 4294967295 #--hashsize 1024 mexleme 65536
                 ipset -q flush "${item%=*}"
             fi
         done
@@ -442,7 +442,7 @@ create_ipsets() {
                             | awk '{print $1}' )"
         for item in ${DNAME_IPSETS_LST}
         do
-            ipset -q create "${item}" hash:ip #--hashsize 65535
+            ipset -q create "${item}" hash:ip maxelem 4294967295 #--hashsize 1024 mexleme 65536
             ipset -q flush "${item}"
         done
     fi
@@ -450,38 +450,21 @@ create_ipsets() {
 
 add_net_address_sets() {
     if [ ! -f "${1}" ] || [ -z "${2}" ]; then return; fi;
-    ipset -q create "${2}" hash:net #--hashsize 65535
-    sed -e 's/\(^[^#]*\)[#].*$/\1/g' -e '/^$/d' -e 's/LZ/  /g' -e 's/del/   /g' \
-    -e 's/\(\([0-9]\{1,3\}[\.]\)\{3\}[0-9]\{1,3\}\([\/][0-9]\{1,2\}\)\{0,1\}\)/LZ\1LZ/g' \
-    -e 's/^.*\(LZ\([0-9]\{1,3\}[\.]\)\{3\}[0-9]\{1,3\}\([\/][0-9]\{1,2\}\)\{0,1\}LZ\).*$/\1/g' \
-    -e '/^[^L][^Z]/d' -e '/[^L][^Z]$/d' -e '/^.\{0,10\}$/d' \
-    -e '/[3-9][0-9][0-9]/d' -e '/[2][6-9][0-9]/d' -e '/[2][5][6-9]/d' -e '/[\/][4-9][0-9]/d' \
-    -e '/[\/][3][3-9]/d' \
-    -e "s/^LZ\(.*\)LZ$/-! del ${2} \1/g" \
-    -e '/^[^-]/d' \
-    -e '/^[-][^!]/d' "${1}" | \
-    awk '{print $0} END{print "COMMIT"}' | ipset restore > /dev/null 2>&1
-    sed -e 's/\(^[^#]*\)[#].*$/\1/g' -e '/^$/d' -e 's/LZ/  /g' -e 's/add/   /g' \
-    -e 's/\(\([0-9]\{1,3\}[\.]\)\{3\}[0-9]\{1,3\}\([\/][0-9]\{1,2\}\)\{0,1\}\)/LZ\1LZ/g' \
-    -e 's/^.*\(LZ\([0-9]\{1,3\}[\.]\)\{3\}[0-9]\{1,3\}\([\/][0-9]\{1,2\}\)\{0,1\}LZ\).*$/\1/g' \
-    -e '/^[^L][^Z]/d' -e '/[^L][^Z]$/d' -e '/^.\{0,10\}$/d' \
-    -e '/[3-9][0-9][0-9]/d' -e '/[2][6-9][0-9]/d' -e '/[2][5][6-9]/d' -e '/[\/][4-9][0-9]/d' \
-    -e '/[\/][3][3-9]/d' \
-    -e "s/^LZ\(.*\)LZ$/-! add ${2} \1/g" \
-    -e '/^[^-]/d' \
-    -e '/^[-][^!]/d' "${1}" | \
-    awk '{print $0} END{print "COMMIT"}' | ipset restore > /dev/null 2>&1
+    ipset -q create "${2}" hash:net maxelem 4294967295 #--hashsize 1024 mexleme 65536
+    sed -e '/^[ \t]*[#]/d' -e 's/[#].*$//g' -e 's/[ \t][ \t]*/ /g' -e 's/^[ ]//' -e 's/[ ]$//' -e '/^[ ]*$/d' "${1}" 2> /dev/null \
+        | awk '$1 ~ /^([0-9]{1,3}[\.]){3}[0-9]{1,3}([\/][0-9]{1,2}){0,1}$/ \
+        && $1 !~ /[3-9][0-9][0-9]/ && $1 !~ /[2][6-9][0-9]/ && $1 !~ /[2][5][6-9]/ && $1 !~ /[\/][4-9][0-9]/ && $1 !~ /[\/][3][3-9]/ \
+        && $1 != "0.0.0.0/0" \
+        && NF >= "1" {print "'"-! del ${2} "'"$1"'"\n-! add ${2} "'"$1} END{print "COMMIT"}' | ipset restore > /dev/null 2>&1
 }
 
 get_ipv4_data_file_item_total() {
     local retval="0"
     [ -f "${1}" ] && {
-        retval="$( sed -e 's/\(^[^#]*\)[#].*$/\1/g' -e '/^$/d' -e 's/LZ/  /g' \
-        -e 's/\(\([0-9]\{1,3\}[\.]\)\{3\}[0-9]\{1,3\}\([\/][0-9]\{1,2\}\)\{0,1\}\)/LZ\1LZ/g' \
-        -e 's/^.*\(LZ\([0-9]\{1,3\}[\.]\)\{3\}[0-9]\{1,3\}\([\/][0-9]\{1,2\}\)\{0,1\}LZ\).*$/\1/g' \
-        -e '/^[^L][^Z]/d' -e '/[^L][^Z]$/d' -e '/^.\{0,10\}$/d' \
-        -e '/[3-9][0-9][0-9]/d' -e '/[2][6-9][0-9]/d' -e '/[2][5][6-9]/d' -e '/[\/][4-9][0-9]/d' \
-        -e '/[\/][3][3-9]/d' "${1}" | grep -c '^[L][Z].*[L][Z]$' )"
+        retval="$( sed -e '/^[ \t]*[#]/d' -e 's/[#].*$//g' -e 's/[ \t][ \t]*/ /g' -e 's/^[ ]//' -e 's/[ ]$//' -e '/^[ ]*$/d' "${1}" 2> /dev/null \
+            | awk -v count="0" '$1 ~ /^([0-9]{1,3}[\.]){3}[0-9]{1,3}([\/][0-9]{1,2}){0,1}$/ \
+            && $1 !~ /[3-9][0-9][0-9]/ && $1 !~ /[2][6-9][0-9]/ && $1 !~ /[2][5][6-9]/ && $1 !~ /[\/][4-9][0-9]/ && $1 !~ /[\/][3][3-9]/ \
+            && NF >= "1" {count++} END{print count}' )"
     }
     echo "${retval}"
 }
@@ -653,7 +636,6 @@ load_ipsets() {
 }
 
 create_url_list() {
-    rm -f "${PATH_TMP_DATA}/${ISPIP_FILE_URL_LIST}" > /dev/null 2>&1
     local index="0"
     until [ "${index}" -ge "${ISP_TOTAL}" ]
     do
@@ -666,26 +648,28 @@ update_isp_data() {
     # 去苍狼山庄（https://ispip.clang.cn/）下载ISP网络运营商CIDR网段数据文件
     echo "$(lzdate)" [$$]: Start to update the ISP IP data files...
     logger -p 1 "[$$]: Start to update the ISP IP data files..."
+    [ ! -d "${PATH_DATA}" ] && mkdir -p "${PATH_DATA}" > /dev/null 2>&1
     [ ! -d "${PATH_TMP_DATA}" ] && mkdir -p "${PATH_TMP_DATA}" > /dev/null 2>&1
-    rm -f "${PATH_TMP_DATA}"/* > /dev/null 2>&1
+    rm -f "${PATH_TMP_DATA}/"* > /dev/null 2>&1
     create_url_list
-    local retval="1"
-    local retry_count="1"
-    local retry_limit="$(( RETRY_NUM + retry_count ))"
+    local index="0" COOKIES_STR="" retval="1" retry_count="1" retry_limit="$(( RETRY_NUM + retry_count ))"    
     while [ "${retry_count}" -le "${retry_limit}" ]
     do
-        if [ ! -f "${PATH_DATA}/cookies.isp" ]; then
-            if wget -q -nc -c --timeout=20 --random-wait --user-agent="Mozilla/5.0 (Windows; U; Windows NT 6.1; en-US)" --prefer-family=IPv4 --referer="${UPDATE_ISPIP_DATA_DOWNLOAD_URL}" --save-cookies="${PATH_DATA}/cookies.isp" --keep-session-cookies --no-check-certificate -P "${PATH_TMP_DATA}" -i "${PATH_TMP_DATA}/${ISPIP_FILE_URL_LIST}";
-            then
-                retval="0"
-                break
+        [ ! -f "${PATH_DATA}/cookies.isp" ] && COOKIES_STR="--save-cookies=${PATH_DATA}/cookies.isp" || COOKIES_STR="--load-cookies=${PATH_DATA}/cookies.isp"
+        eval "wget -q -nc -c --timeout=20 --random-wait --user-agent=\"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.5304.88 Safari/537.36 Edg/108.0.1462.46\" --referer=${UPDATE_ISPIP_DATA_DOWNLOAD_URL} ${COOKIES_STR} --keep-session-cookies --no-check-certificate -P ${PATH_TMP_DATA} -i ${PATH_TMP_DATA}/${ISPIP_FILE_URL_LIST}"
+        index="0"
+        until [ "${index}" -ge "${ISP_TOTAL}" ]
+        do
+            if eval [ ! -f "${PATH_TMP_DATA}/\${ISP_DATA_${index}}" ]; then
+                [ ! -f "${PATH_DATA}/cookies.isp" ] && COOKIES_STR="--save-cookies=${PATH_DATA}/cookies.isp" || COOKIES_STR="--load-cookies=${PATH_DATA}/cookies.isp"
+                eval "wget -q -nc -c --timeout=20 --random-wait --user-agent=\"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.5304.88 Safari/537.36 Edg/108.0.1462.46\" --referer=${UPDATE_ISPIP_DATA_DOWNLOAD_URL} ${COOKIES_STR} --keep-session-cookies --no-check-certificate -O ${PATH_TMP_DATA}/lz_\${ISP_DATA_${index}} ${UPDATE_ISPIP_DATA_DOWNLOAD_URL}/\${ISP_DATA_${index}}"
+                eval [ -f "${PATH_TMP_DATA}/lz_\${ISP_DATA_${index}}" ] && eval mv -f "${PATH_TMP_DATA}/lz_\${ISP_DATA_${index}}" "${PATH_TMP_DATA}/\${ISP_DATA_${index}}" > /dev/null 2>&1
             fi
-        else
-            if  wget -q -nc -c --timeout=20 --random-wait --user-agent="Mozilla/5.0 (Windows; U; Windows NT 6.1; en-US)" --prefer-family=IPv4 --referer="${UPDATE_ISPIP_DATA_DOWNLOAD_URL}" --load-cookies="${PATH_DATA}/cookies.isp" --keep-session-cookies --no-check-certificate -P "${PATH_TMP_DATA}" -i "${PATH_TMP_DATA}/${ISPIP_FILE_URL_LIST}";
-            then
-                retval="0"
-                break
-            fi
+            let index++
+        done
+        if [ "$( find "${PATH_TMP_DATA}" -name "*_cidr.txt" -print0 2> /dev/null | awk '{} END{print NR}' )" -ge "${ISP_TOTAL}" ]; then
+            retval="0"
+            break
         fi
         let retry_count++
         sleep "5s"
@@ -693,7 +677,6 @@ update_isp_data() {
     if [ "${retval}" = "0" ]; then
         echo "$(lzdate)" [$$]: Download the ISP IP data files successfully.
         logger -p 1 "[$$]: Download the ISP IP data files successfully."
-        [ ! -d "${PATH_DATA}" ] && mkdir -p "${PATH_DATA}"
         ! mv -f "${PATH_TMP_DATA}"/*"_cidr.txt" "${PATH_DATA}" > /dev/null 2>&1 && retval="1"
         [ "${retval}" != "0" ] && {
             echo "$(lzdate)" [$$]: Failed to copy the ISP IP data files.
@@ -722,10 +705,10 @@ check_isp_data() {
     local index="0"
     until [ "${index}" -ge "${ISP_TOTAL}" ]
     do
-        eval [ ! -f "${PATH_DATA}/\${ISP_DATA_${index}}" ] && return 1
+        eval [ ! -f "${PATH_DATA}/\${ISP_DATA_${index}}" ] && return "1"
         let index++
     done
-    return 0
+    return "0"
 }
 
 load_update_task() {
@@ -833,11 +816,11 @@ unload_system_boot() {
 }
 
 command_parsing() {
-    [ "${HAMMER}" != "${UNLOAD}" ] && ! check_suport_evn && return 1
-    [ "${PARAM_TOTAL}" = "0" ] && return 0
+    [ "${HAMMER}" != "${UNLOAD}" ] && ! check_suport_evn && return "1"
+    [ "${PARAM_TOTAL}" = "0" ] && return "0"
     if [ "${HAMMER}" = "${UPDATE}" ]; then
-        update_isp_data && return 0
-        return 1
+        update_isp_data && return "0"
+        return "1"
     elif [ "${HAMMER}" = "${UNLOAD}" ]; then
         unload_update_task
         unload_system_boot
@@ -845,11 +828,11 @@ command_parsing() {
         [ -f "${CUSTOM_IPSETS_TMP_LST_FILENAME}" ] && rm -f "${CUSTOM_IPSETS_TMP_LST_FILENAME}" > /dev/null 2>&1
         echo "$(lzdate)" [$$]: All ISP data have been unloaded.
         logger -p 1 "[$$]: All ISP data have been unloaded."
-        return 1
+        return "1"
     fi
     echo "$(lzdate)" [$$]: Oh, you\'re using the wrong command.
     logger -p 1 "[$$]: Oh, you're using the wrong command."
-    return 1
+    return "1"
 }
 
 print_header_info() {
