@@ -653,7 +653,8 @@ update_isp_data() {
     [ ! -d "${PATH_TMP_DATA}" ] && mkdir -p "${PATH_TMP_DATA}" > /dev/null 2>&1
     rm -f "${PATH_TMP_DATA}/"* > /dev/null 2>&1
     create_url_list
-    local index="0" COOKIES_STR="" retval="1" retry_count="1" retry_limit="$(( RETRY_NUM + retry_count ))"    
+    local index="0" COOKIES_STR="" retval="1" retry_count="1"
+    local retry_limit="$(( RETRY_NUM + retry_count ))"
     while [ "${retry_count}" -le "${retry_limit}" ]
     do
         [ ! -f "${PATH_DATA}/cookies.isp" ] && COOKIES_STR="--save-cookies=${PATH_DATA}/cookies.isp" || COOKIES_STR="--load-cookies=${PATH_DATA}/cookies.isp"
