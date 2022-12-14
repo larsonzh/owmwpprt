@@ -605,9 +605,9 @@ print_wan_ip() {
                 print $2,ifa,system("curl -s --connect-timeout 20 --interface "ifa" -w n ""'"${PIPDN}"'"" 2> /dev/null")
             }' \
             | awk -Fn '{print $1}' )"
-        echo "${item}" | awk -v isp="$( get_isp_name "$( echo "${item}" | awk '{print $3; exit}' )" )" 'NF != "0" {
+        echo "${item}" | awk -v isp_name="$( get_isp_name "$( echo "${item}" | awk '{print $3; exit}' )" )" 'NF != "0" {
                 wanip="No Public IP"
-                if ($3 != "") wanip=$3
+                if ($3 != "") {wanip=$3; isp=isp_name}
                 else isp=""
                 strbuf=sprintf("%s\t%-15s\t%s\t%s","'"[$$]:   ${ifx}"'",$2,wanip,isp)
                 printf("%s %s\n","'"$(lzdate)"'",strbuf)
