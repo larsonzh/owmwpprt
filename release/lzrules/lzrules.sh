@@ -1,5 +1,5 @@
 #!/bin/sh
-# lzrules.sh v1.0.8
+# lzrules.sh v1.0.9
 # By LZ 妙妙呜 (larsonzhang@gmail.com)
 
 # LZ RULES script for OpenWrt based router
@@ -209,7 +209,7 @@ CUSTOM_IPSETS_LST=""
 DNAME_IPSETS_LST=""
 
 # 版本号
-LZ_VERSION=v1.0.8
+LZ_VERSION=v1.0.9
 
 # 项目标识
 PROJECT_ID="lzrules"
@@ -480,7 +480,7 @@ get_wan_list() {
 }
 
 get_ipset_total() {
-    local retval="$( ipset -q list "${1}" | grep -Ec '^([0-9]{1,3}[\.]){3}[0-9]{1,3}' )"
+    local retval="$( ipset -q list "${1}" | grep -Ec '^([0-9]{1,3}[\.]){3}[0-9]{1,3}([\/][0-9]{1,2}){0,1}' )"
     echo "${retval}"
 }
 
@@ -570,26 +570,46 @@ print_wan_ispip_item_num() {
     fi
 }
 
+get_isp_name() {
+    local retval="FOREIGN/Unknown" index="0" tmp_isp_set="lz_tmp_isp_set"
+    if [ -n "${1}" ]; then
+        until [ "${index}" -ge "${ISP_TOTAL}" ]
+        do
+            eval add_net_address_sets "${PATH_DATA}/\${ISP_DATA_${index}}" "${tmp_isp_set}"
+            if ipset -q test "${tmp_isp_set}" "${1}"; then
+                eval retval="\${ISP_NAME_${index}}"
+                break
+            fi
+            ipset -q flush "${tmp_isp_set}"
+            let index++
+        done
+        ipset -q destroy "${tmp_isp_set}"
+    fi
+    echo "${retval}"
+   
+}
+
 print_wan_ip() {
-    local ifn="$( ip route show default 2> /dev/null | awk '{if ($5 != "") print $5}' )" ifx=""
+    local ifn="$( ip route show 2> /dev/null | awk '/default/ {if ($5 != "") print $5}' )" ifx="" item=""
     [ -z "${ifn}" ] && return
     echo "$(lzdate) ${MY_LINE}"
     logger -p 1 "${MY_LINE}"
     for ifn in ${ifn}
     do
         ifx="$( get_wan_if "${ifn}" )"
-        ip -4 -o address show dev "${ifn}" 2> /dev/null \
-            | awk '{
+        item="$( ip -4 -o address show dev "${ifn}" 2> /dev/null \
+            | awk 'NF != "0" {
                 ifa=$4
                 psn=index(ifa, "/")
                 if (psn > 0) ifa=substr(ifa, 1, psn-1)
                 print $2,ifa,system("curl -s --connect-timeout 20 --interface "ifa" -w n ""'"${PIPDN}"'"" 2> /dev/null")
             }' \
-            | awk -Fn '{print $1}' \
-            | awk '{
+            | awk -Fn '{print $1}' )"
+        echo "${item}" | awk -v isp="$( get_isp_name "$( echo "${item}" | awk '{print $3; exit}' )" )" 'NF != "0" {
                 wanip="No Public IP"
                 if ($3 != "") wanip=$3
-                strbuf=sprintf("%s\t%-15s\t%s","'"[$$]:   ${ifx}"'",$2,wanip)
+                else isp=""
+                strbuf=sprintf("%s\t%-15s\t%s\t%s","'"[$$]:   ${ifx}"'",$2,wanip,isp)
                 printf("%s %s\n","'"$(lzdate)"'",strbuf)
                 system("logger -p 1 "strbuf)
             }'
@@ -837,7 +857,7 @@ command_parsing() {
     return "1"
 }
 
-print_header_info() {
+print_header() {
     echo "$(lzdate)" [$$]:
     echo "$(lzdate) ${MY_LINE}"
     echo "$(lzdate)" [$$]: LZ RULES "${LZ_VERSION}" script commands start...
@@ -855,7 +875,7 @@ print_header_info() {
     logger -p 1 "${MY_LINE}"
 }
 
-print_tail_info() {
+print_tail() {
     echo "$(lzdate) ${MY_LINE}"
     echo "$(lzdate)" [$$]: LZ RULES "${LZ_VERSION}" script commands executed!
     echo "$(lzdate)" [$$]:
@@ -868,7 +888,7 @@ print_tail_info() {
 
 # ---------------------执行代码---------------------
 
-print_header_info
+print_header
 
 while true
 do
@@ -884,6 +904,6 @@ do
     break
 done
 
-print_tail_info
+print_tail
 
 # END
