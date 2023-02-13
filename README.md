@@ -67,7 +67,7 @@ OpenWrt固件多WAN口策略路由分流工具
 
 SSH终端下载安装命令
 ```markdown
-        okpg update
+        opkg update
         opkg install mwan3 luci-app-mwan3 luci-i18n-mwan3-zh-cn
         opkg install wget-ssl
         opkg install curl
