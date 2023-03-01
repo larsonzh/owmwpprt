@@ -1,5 +1,5 @@
 #!/bin/sh
-# lzrules.sh v1.0.9
+# lzrules.sh v1.1.0
 # By LZ 妙妙呜 (larsonzhang@gmail.com)
 
 # LZ RULES script for OpenWrt based router
@@ -209,7 +209,7 @@ CUSTOM_IPSETS_LST=""
 DNAME_IPSETS_LST=""
 
 # 版本号
-LZ_VERSION=v1.0.9
+LZ_VERSION=v1.1.0
 
 # 项目标识
 PROJECT_ID="lzrules"
@@ -273,7 +273,7 @@ MY_LINE="[$$]: ---------------------------------------------"
 
 # ---------------------函数定义---------------------
 
-lzdate() { eval echo "$( date +"%F %T" )"; }
+lzdate() { date +"%F %T"; }
 
 check_suport_evn() {
     local retval="0"
