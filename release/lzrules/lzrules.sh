@@ -602,9 +602,12 @@ print_wan_ip() {
                 ifa=$4
                 psn=index(ifa, "/")
                 if (psn > 0) ifa=substr(ifa, 1, psn-1)
-                print $2,ifa,system("curl -s --connect-timeout 20 --interface "ifa" -w n ""'"${PIPDN}"'"" 2> /dev/null")
+                if (index($2, "pppoe") > 0)
+                    print $2,ifa,system("curl -s --connect-timeout 20 --interface "$2"'" -w 'OpenWrt' ${PIPDN}"'"" 2> /dev/null");
+                else
+                    print $2,ifa,system("curl -s --connect-timeout 20 --interface "ifa"'" -w 'OpenWrt' ${PIPDN}"'"" 2> /dev/null");
             }' \
-            | awk -Fn '{print $1}' )"
+            | awk -F 'OpenWrt' '{print $1}' )"
         echo "${item}" | awk -v isp_name="$( get_isp_name "$( echo "${item}" | awk '{print $3; exit}' )" )" 'NF != "0" {
                 wanip="No Public IP"
                 if ($3 != "") {wanip=$3; isp=isp_name}
