@@ -612,7 +612,7 @@ print_wan_ip() {
                 wanip="No Public IP"
                 if ($3 != "") {wanip=$3; isp=isp_name}
                 else isp=""
-                strbuf=sprintf("%s\t%-15s\t%s\t%s","'"[$$]:   ${ifx}"'",$2,wanip,isp)
+                strbuf=sprintf("%-23s%-17s%-17s%s","'"[$$]:   ${ifx}"'",$2,wanip,isp)
                 printf("%s %s\n","'"$(lzdate)"'",strbuf)
                 system("logger -p 1 "strbuf)
             }'
