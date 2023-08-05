@@ -9,7 +9,7 @@ OpenWrt固件多WAN口策略路由分流工具
 
 脚本使用的所有ISP网络运营商CIDR网段数据源自clang苍狼山庄 https://ispip.clang.cn/ 整理的APNIC官方每日更新。
 
-脚本作为mwan3的配套软件，使用前请到OpenWrt中的“Software”界面内搜索并下载安装如下软件：
+脚本作为mwan3的配套软件，使用前请到OpenWrt中的“Software”界面内搜索并下载安装如下软 件：
     <ul><li>mwan3</li>
     <li>luci-app-mwan3</li>
     <li>luci-i18n-mwan3-zh-cn</li>
