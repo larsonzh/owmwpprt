@@ -5,7 +5,7 @@ OpenWrt固件多WAN口策略路由分流工具
 
 **v1.1.1**
 
-本工具使用Shell脚本编写，可在OpenWrt固件的路由器上基于mwan3的强大功能，根据各网络运营商的互联网地址的分布，针对路由器上每个WAN口生成多个不同的目标网段数据集合，灵活绑定到mwan3的WAN口策略规则中，实现全网段的多WAN口数据流量分流控制策略。
+本工具使用Shell脚本编写，可在OpenWrt固件的路由器上，基于mwan3的强大功能，按照各网络运营商互联网地址分布情况，针对路由器上每个WAN口生成多个不同的目标网段数据集合，灵活绑定到mwan3的WAN口策略规则中，实现全网段的多WAN口数据流量分流控制策略。
 
 脚本使用的所有ISP网络运营商CIDR网段数据源自clang苍狼山庄 https://ispip.clang.cn/ 整理的APNIC官方每日更新。
 
@@ -22,11 +22,11 @@ OpenWrt固件多WAN口策略路由分流工具
 
 **重要说明**
 
-OpenWrt 23.05版固件中对dnsmasq-full编译选项做出重大更改，彻底删除ipset支持，对mwan3及其ipset功能产生重大影响。mwan3目前不支持nfset，且不能放弃兼容包/翻译包软件包后直接支持原生nftables。现在ipset已不能在23.05固件上运行，且没有任何可供使用的兼容包/翻译包。
+OpenWrt 23.05固件中对dnsmasq-full编译选项做出重大更改，彻底删除ipset支持，对mwan3及其ipset功能产生重大影响。mwan3目前不支持nfset，且不能放弃兼容包/翻译包软件后直接支持原生nftables。现在ipset已不能在23.05固件上运行，且没有任何可供使用的兼容包/翻译包。
 
-在mwan3能够直接支持原生nftables或nfset之前，建议在23.03及之前版本固件下使用本分流工具。23.03固件应该有足够的软件更新支持供用户长期使用。一旦mwan3正式支持nfset，作者会对本分流软件中用到的ipset功能进行nfset技术升级。
+在mwan3能够直接支持原生nftables或nfset之前，建议在23.03及以前版本固件下使用本分流工具。23.03固件应该有足够的软件更新支持供用户时间使用。一旦mwan3正式支持nfset，作者会对本分流软件中用到的ipset功能进行nfset技术升级。
 
-23.03固件时，请务必安装iptables-nft和ip6tables-nft两个软件。
+23.03固件时，请务必安装iptables-nft和ip6tables-nft两个软件，否则mwan3不能正常运行。
 
 ## **开发环境**
 
