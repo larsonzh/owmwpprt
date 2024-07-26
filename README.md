@@ -14,9 +14,19 @@ OpenWrt固件多WAN口策略路由分流工具
    - mwan3
    - luci-app-mwan3
    - luci-i18n-mwan3-zh-cn
+   - iptables-nft
+   - ip6tables-nft
    - wget-ssl
    - curl
    - dnsmasq-full（注：安装前需卸载删除原有的dnsmasq软件包）
+
+**重要说明**
+
+OpenWrt 23.05版固件中对dnsmasq-full编译选项进行了重大更改，彻底删除了ipset支持。这对mwan3及其ipset功能产生了重大影响，mwan3目前不支持nfset，且不能放弃兼容包/翻译包软件包后直接支持原生nftables。现在ipset已不能在23.05固件上运行，且没有任何可供使用的兼容包/翻译包。
+
+在mwan3能够直接支持原生nftables或nfset之前，建议在23.03及之前版本固件下使用本分流工具。23.03固件应该有足够的软件更新支持供用户长期使用。一旦mwan3正式支持nfset，作者会对本分流软件中用到的ipset功能进行nfset技术升级。
+
+23.03固件时，请务必安装iptables-nft和ip6tables-nft两个软件。
 
 ## **开发环境**
 
@@ -70,6 +80,7 @@ OpenWrt固件多WAN口策略路由分流工具
 ```markdown
         opkg update
         opkg install mwan3 luci-app-mwan3 luci-i18n-mwan3-zh-cn
+        opkg install iptables-nft ip6tables-nft
         opkg install wget-ssl
         opkg install curl
         opkg remove dnsmasq && opkg install dnsmasq-full
