@@ -3,7 +3,7 @@ OpenWrt Multi WAN Port Policy Routing Tool
 
 OpenWrt固件多WAN口策略路由分流工具
 
-**v1.1.1**
+**v2.0.0**
 
 本工具使用Shell脚本编写，可在OpenWrt固件的路由器上，基于mwan3的强大功能，按照各网络运营商互联网地址分布情况，针对路由器上每个WAN口生成多个不同的目标网段数据集合，灵活绑定到mwan3的WAN口策略规则中，实现全网段的多WAN口数据流量分流控制策略。
 
@@ -38,8 +38,8 @@ OpenWrt 23.05固件中对dnsmasq-full编译选项做出重大更改，彻底删�
 
 ## **主要功能**
 
-   - 最多可支持8个WAN口的分流控制。
-   - 可按如下10个覆盖全国的网络运营商IPv4目标网段的划分配置流量出口：
+   - 最多可支持8个WAN口的IPv4/6流量控制。
+   - 可按如下10个覆盖全国的网络运营商IPv4/6目标网段的划分配置流量出口：
      - 中国电信网段
      - 中国联通/网通网段
      - 中国移动网段
@@ -51,12 +51,12 @@ OpenWrt 23.05固件中对dnsmasq-full编译选项做出重大更改，彻底删�
      - 澳门地区运营商网段
      - 台湾地区运营商网段
    - 可通过mwan3为国外网段数据流量指定路由器出口。
-   - 可通过mwan3为IPv6数据流量指定路由器出口。
+   - 可通过mwan3为IPv4/6数据流量指定路由器出口。
    - 可任意指定某个目标网段数据流量的路由器出口。
    - 可设置某个目标网段数据流量通过负载均衡自动分配流量出口。
    - 可禁止某个网络运营商目标网段数据的使用。
-   - 可自定义任意数量的IPv4目标网址/网段数据集合，以在mwan3的流量出口策略规则中使用。
-   - 可自定义任意数量的域名数据集合，按所访问的域名分配流量出口。
+   - 可自定义任意数量的IPv4/6目标网址/网段数据集合，以在mwan3的流量出口策略规则中使用。
+   - 可自定义任意数量的域名IPv4数据集合，按所访问的域名分配流量出口。
    - 可自动/手动下载更新所有网络运营商的CIDR网段数据。
    - 可设置定时自动更新的时间及间隔。
    - 可自动在系统计划任务中添加定时更新数据任务，无需人工手动添加。
@@ -155,19 +155,30 @@ OpenWrt 23.05固件中对dnsmasq-full编译选项做出重大更改，彻底删�
 5. 在lzrules目录中，lzrules.sh为本工具的可执行脚本，若发现无运行权限，请赋予相关属性。data目录中保存的是10个网络运营商IPv4目标网段的数据文件，不要手工修改或删除。
 ```markdown
         /lzrules/lzrules.sh -- 主运行脚本
-        /lzrules/data/  10个ISP运营商IPv4网段数据文件
-                        chinatelecom_cidr.txt -- 中国电信
-                        unicom_cnc_cidr.txt   -- 中国联通/网通
-                        cmcc_cidr.txt         -- 中国移动
-                        crtc_cidr.txt         -- 中国铁通
-                        cernet_cidr.txt       -- 中国教育网
-                        gwbn_cidr.txt         -- 长城宽带/鹏博士
-                        othernet_cidr.txt     -- 中国大陆其他运营商
-                        hk_cidr.txt           -- 香港地区运营商
-                        mo_cidr.txt           -- 澳门地区运营商
-                        tw_cidr.txt           -- 台湾地区运营商
-                        custom_ipsets_lst.txt -- 用户自定义IPv4目标访问网址/网段数据集合列表文件
-                        dname_ipsets_lst.txt  -- 用户自定义目标访问域名数据集合列表文件
+        /lzrules/data/  10个ISP运营商的IPv4/6网段数据文件及用户自定义的数据集合列表文件
+                        chinatelecom_cidr.txt      -- 中国电信
+                        unicom_cnc_cidr.txt        -- 中国联通/网通
+                        cmcc_cidr.txt              -- 中国移动
+                        crtc_cidr.txt              -- 中国铁通
+                        cernet_cidr.txt            -- 中国教育网
+                        gwbn_cidr.txt              -- 长城宽带/鹏博士
+                        othernet_cidr.txt          -- 中国大陆其他运营商
+                        hk_cidr.txt                -- 香港地区运营商
+                        mo_cidr.txt                -- 澳门地区运营商
+                        tw_cidr.txt                -- 台湾地区运营商
+                        chinatelecom_ipv6.txt      -- 中国电信 IPv6
+                        unicom_cnc_ipv6.txt        -- 中国联通/网通 IPv6
+                        cmcc_ipv6.txt              -- 中国移动 IPv6
+                        crtc_ipv6.txt              -- 中国铁通 IPv6
+                        cernet_ipv6.txt            -- 中国教育网 IPv6
+                        gwbn_ipv6.txt              -- 长城宽带/鹏博士 IPv6
+                        othernet_ipv6.txt          -- 中国大陆其他运营商 IPv6
+                        hk_ipv6.txt                -- 香港地区运营商 IPv6
+                        mo_ipv6.txt                -- 澳门地区运营商 IPv6
+                        tw_ipv6.txt                -- 台湾地区运营商 IPv6
+                        custom_ipsets_lst.txt      -- 用户自定义IPv4目标访问网址/网段数据集合列表文件
+                        custom_ipv6_ipsets_lst.txt -- 用户自定义IPv6目标访问网址/网段数据集合列表文件
+                        dname_ipsets_lst.txt       -- 用户自定义目标访问域名数据集合列表文件
 ```
 五、软件设置
 
@@ -177,11 +188,11 @@ OpenWrt 23.05固件中对dnsmasq-full编译选项做出重大更改，彻底删�
 
 2. 打开脚本后先看一下前面的文字说明，然后在下面的“用户运行策略自定义区”内，即可根据说明，通过修改缺省参数的方式，对运营商目标网段流量进行出口设置。还可在此区域内设置和修改“定时更新ISP网络运营商CIDR网段数据时间参数定义”。
 
-   脚本中的WAN口按照OpenWrt“网络-MultiWAN管理器-接口”配置界面里的IPv4协议接口设定顺序排列，出口参数从“0”~“7”对应第一至八WAN口，参数“8”指定访问该网段的流量以负载均衡分配出口，“9”为分流策略中不使用该网段的数据。
+   脚本中的WAN口按照OpenWrt“网络-MultiWAN管理器-接口”配置界面里的IPv4/6协议接口设定顺序排列，出口参数从“0”~“7”对应第一至八的物理WAN口，参数“8”指定访问该网段的流量以负载均衡分配出口，“9”为分流策略中不使用该网段的数据。
 
-   脚本中的WAN口序列中不包括IPv6协议的接口，IPv6协议的流量出口在“MultiWAN管理器”中单独配置出口策略规则。
+   示例中的WAN口序列中不包括IPv6协议的接口，IPv6协议的流量出口在“MultiWAN管理器”中单独配置出口策略规则。
 
-   脚本已涵盖中国地区所有运营商IPv4目标网段，在分配完所有国内流量后，剩下的就是国外流量，该部分流量出口直接在“MultiWAN管理器”中按照优先级顺序配置出口策略规则。
+   脚本已涵盖中国地区所有运营商IPv4/6目标网段，在分配完所有国内流量后，剩下的就是国外流量，该部分流量出口直接在“MultiWAN管理器”中按照优先级顺序配置出口策略规则。
 
 ![屏幕截图 2022-10-22 055813](https://user-images.githubusercontent.com/73221087/197294991-c557f396-7667-442c-b34b-9d21c3a2fe10.png)
 
@@ -253,7 +264,7 @@ OpenWrt 23.05固件中对dnsmasq-full编译选项做出重大更改，彻底删�
 
 4. 删除lzrules目录，脚本软件至此全部清除，OpenWrt固件设置恢复原状。
 
-## 捐赠
+## 捐助
 
 小众需求，开源不易，欢迎投喂 😘
 
