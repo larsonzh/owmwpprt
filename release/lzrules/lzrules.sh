@@ -1,5 +1,5 @@
 #!/bin/sh
-# lzrules.sh v2.0.1
+# lzrules.sh v2.0.2
 # By LZ 妙妙呜 (larsonzhang@gmail.com)
 
 # LZ RULES script for OpenWrt based router
@@ -288,7 +288,7 @@ CUSTOM_V6_IPSETS_LST=""
 DNAME_IPSETS_LST=""
 
 # 版本号
-LZ_VERSION=v2.0.1
+LZ_VERSION=v2.0.2
 
 # 项目标识
 PROJECT_ID="lzrules"
@@ -418,35 +418,31 @@ check_suport_evn() {
 }
 
 cleaning_user_data() {
-    ! echo "${ISP_0_WAN_PORT}" | grep -q '^[0-9]$' && ISP_0_WAN_PORT="0"
-    ! echo "${ISP_1_WAN_PORT}" | grep -q '^[0-9]$' && ISP_1_WAN_PORT="0"
-    ! echo "${ISP_2_WAN_PORT}" | grep -q '^[0-9]$' && ISP_2_WAN_PORT="1"
-    ! echo "${ISP_3_WAN_PORT}" | grep -q '^[0-9]$' && ISP_3_WAN_PORT="1"
-    ! echo "${ISP_4_WAN_PORT}" | grep -q '^[0-9]$' && ISP_4_WAN_PORT="1"
-    ! echo "${ISP_5_WAN_PORT}" | grep -q '^[0-9]$' && ISP_5_WAN_PORT="1"
-    ! echo "${ISP_6_WAN_PORT}" | grep -q '^[0-9]$' && ISP_6_WAN_PORT="0"
-    ! echo "${ISP_7_WAN_PORT}" | grep -q '^[0-9]$' && ISP_7_WAN_PORT="0"
-    ! echo "${ISP_8_WAN_PORT}" | grep -q '^[0-9]$' && ISP_8_WAN_PORT="0"
-    ! echo "${ISP_9_WAN_PORT}" | grep -q '^[0-9]$' && ISP_9_WAN_PORT="0"
-    ! echo "${ISP_0_WAN_PORT_V6}" | grep -q '^[0-9]$' && ISP_0_WAN_PORT_V6="9"
-    ! echo "${ISP_1_WAN_PORT_V6}" | grep -q '^[0-9]$' && ISP_1_WAN_PORT_V6="9"
-    ! echo "${ISP_2_WAN_PORT_V6}" | grep -q '^[0-9]$' && ISP_2_WAN_PORT_V6="9"
-    ! echo "${ISP_3_WAN_PORT_V6}" | grep -q '^[0-9]$' && ISP_3_WAN_PORT_V6="9"
-    ! echo "${ISP_4_WAN_PORT_V6}" | grep -q '^[0-9]$' && ISP_4_WAN_PORT_V6="9"
-    ! echo "${ISP_5_WAN_PORT_V6}" | grep -q '^[0-9]$' && ISP_5_WAN_PORT_V6="9"
-    ! echo "${ISP_6_WAN_PORT_V6}" | grep -q '^[0-9]$' && ISP_6_WAN_PORT_V6="9"
-    ! echo "${ISP_7_WAN_PORT_V6}" | grep -q '^[0-9]$' && ISP_7_WAN_PORT_V6="9"
-    ! echo "${ISP_8_WAN_PORT_V6}" | grep -q '^[0-9]$' && ISP_8_WAN_PORT_V6="9"
-    ! echo "${ISP_9_WAN_PORT_V6}" | grep -q '^[0-9]$' && ISP_9_WAN_PORT_V6="9"
-    ! echo "${INTERVAL_DAY}" | grep -qE '^[0-9]$|^[1-2][0-9]$|^[3][0-1]$' && INTERVAL_DAY="3"
-    ! echo "${TIMER_HOUR}" | grep -qE '^[0-9]$|^[1][0-9]$|^[2][0-3]$|^[xX]$' && TIMER_HOUR="x"
-    [ "${TIMER_HOUR}" = "X" ] && TIMER_HOUR="x"
-    ! echo "${TIMER_MIN}" | grep -qE '^[0-9]$|^[1-5][0-9]$|^[xX]$' && TIMER_MIN="x"
-    [ "${TIMER_MIN}" = "X" ] && TIMER_MIN="x"
-    ! echo "${RETRY_NUM}" | grep -qE '^[0-9]$|^[1-9][0-9]$' && RETRY_NUM="5"
-    ! echo "${CUSTOM_IPSETS}" | grep -q '^[0-1]$' && CUSTOM_IPSETS="1"
-    ! echo "${CUSTOM_V6_IPSETS}" | grep -q '^[0-1]$' && CUSTOM_V6_IPSETS="1"
-    ! echo "${DNAME_IPSETS}" | grep -q '^[0-1]$' && DNAME_IPSETS="1"
+    ! echo "${ISP_0_WAN_PORT}" | grep -q '^[0-9]$' && ISP_0_WAN_PORT=0
+    ! echo "${ISP_1_WAN_PORT}" | grep -q '^[0-9]$' && ISP_1_WAN_PORT=0
+    ! echo "${ISP_2_WAN_PORT}" | grep -q '^[0-9]$' && ISP_2_WAN_PORT=1
+    ! echo "${ISP_3_WAN_PORT}" | grep -q '^[0-9]$' && ISP_3_WAN_PORT=1
+    ! echo "${ISP_4_WAN_PORT}" | grep -q '^[0-9]$' && ISP_4_WAN_PORT=1
+    ! echo "${ISP_5_WAN_PORT}" | grep -q '^[0-9]$' && ISP_5_WAN_PORT=1
+    ! echo "${ISP_6_WAN_PORT}" | grep -q '^[0-9]$' && ISP_6_WAN_PORT=0
+    ! echo "${ISP_7_WAN_PORT}" | grep -q '^[0-9]$' && ISP_7_WAN_PORT=0
+    ! echo "${ISP_8_WAN_PORT}" | grep -q '^[0-9]$' && ISP_8_WAN_PORT=0
+    ! echo "${ISP_9_WAN_PORT}" | grep -q '^[0-9]$' && ISP_9_WAN_PORT=0
+    local index="0"
+    until [ "${index}" -ge "${ISP_TOTAL}" ]
+    do
+        ! eval echo "\${ISP_${index}_WAN_PORT_V6}" | grep -q '^[0-9]$' && eval "ISP_${index}_WAN_PORT_V6=9"
+        index="$(( index + 1 ))"
+    done
+    ! echo "${INTERVAL_DAY}" | grep -qE '^[0-9]$|^[1-2][0-9]$|^[3][0-1]$' && INTERVAL_DAY=3
+    ! echo "${TIMER_HOUR}" | grep -qE '^[0-9]$|^[1][0-9]$|^[2][0-3]$|^[xX]$' && TIMER_HOUR=x
+    [ "${TIMER_HOUR}" = "X" ] && TIMER_HOUR=x
+    ! echo "${TIMER_MIN}" | grep -qE '^[0-9]$|^[1-5][0-9]$|^[xX]$' && TIMER_MIN=x
+    [ "${TIMER_MIN}" = "X" ] && TIMER_MIN=x
+    ! echo "${RETRY_NUM}" | grep -qE '^[0-9]$|^[1-9][0-9]$' && RETRY_NUM=5
+    ! echo "${CUSTOM_IPSETS}" | grep -q '^[0-1]$' && CUSTOM_IPSETS=1
+    ! echo "${CUSTOM_V6_IPSETS}" | grep -q '^[0-1]$' && CUSTOM_V6_IPSETS=1
+    ! echo "${DNAME_IPSETS}" | grep -q '^[0-1]$' && DNAME_IPSETS=1
 }
 
 get_wan_dev_if() {
@@ -537,7 +533,7 @@ get_wan_name_v6() {
 }
 
 print_ipv4_address_list() {
-    sed -e 's/^[[:space:]]\+//g' -e 's/[#].*$//g' -e 's/[[:space:]].*$//g' \
+    sed -e 's/^[[:space:]]\+//g' -e 's/[[:space:]#].*$//g' \
         -e 's/\(^\|[^[:digit:]]\)[0]\+\([[:digit:]]\)/\1\2/g' \
         -e "/^$( echo "${regex_v4}" | sed 's/[(){}|?]/\\&/g' )$/!d" \
         -e 's/\/32//g' "${1}" \
@@ -564,10 +560,11 @@ print_ipv4_address_list() {
 }
 
 print_ipv6_address_list() {
-    sed -e 's/^[[:space:]]\+//g' -e 's/[#].*$//g' -e 's/[[:space:]].*$//g' \
+    sed -e 's/^[[:space:]]\+//g' -e 's/[[:space:]#].*$//g' \
         -e 's/\(^\|[\:\/\%]\)[0]\+\([[:digit:]]\)/\1\2/g' \
         -e "/^$( echo "${regex_v6}" | sed 's/[(){}|?]/\\&/g' )$/!d" \
         -e 's/\/128//g' "${1}" \
+        | tr '[:A-Z:]' '[:a-z:]' \
         | awk 'NF == "1" && !i[$1]++ {print $1}'
 }
 
@@ -580,7 +577,7 @@ delete_ipsets() {
         index="$(( index + 1 ))"
     done
     ipset -q flush "${ISPIP_SET_B}" && ipset -q destroy "${ISPIP_SET_B}"
-    ipset -q flush "${ISPIP_V6_SET_B}" && ipset -q destroy "${ISPIP_SET_B}"
+    ipset -q flush "${ISPIP_V6_SET_B}" && ipset -q destroy "${ISPIP_V6_SET_B}"
     [ ! -f "${CUSTOM_IPSETS_TMP_LST_FILENAME}" ] && return
     sed -e '/^[[:space:]]*[#]/d' -e 's/[#].*$//g' -e '/^[[:space:]]*$/d' "${CUSTOM_IPSETS_TMP_LST_FILENAME}" \
         | awk '{if ($1 != "") system("ipset -q flush "$1" && ipset -q destroy "$1)}'
