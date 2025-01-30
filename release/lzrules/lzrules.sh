@@ -1,5 +1,5 @@
 #!/bin/sh
-# lzrules.sh v2.0.2
+# lzrules.sh v2.0.3
 # By LZ 妙妙呜 (larsonzhang@gmail.com)
 
 # LZ RULES script for OpenWrt based router
@@ -267,10 +267,10 @@ ISP_V6_NAME_8="MACAO_V6   "
 ISP_V6_NAME_9="TAIWAN_V6  "
 
 # IPv4 WAN端口设备列表
-WAN_DEV_LIST=""
+WAN_DEV_LIST="${WAN_DEV_LIST:-""}"
 
 # IPv6 WAN端口设备列表
-WAN_V6_DEV_LIST=""
+WAN_V6_DEV_LIST="${WAN_V6_DEV_LIST:-""}"
 
 # 可用IPv4 WAN口数量
 WAN_AVAL_NUM="0"
@@ -288,7 +288,7 @@ CUSTOM_V6_IPSETS_LST=""
 DNAME_IPSETS_LST=""
 
 # 版本号
-LZ_VERSION=v2.0.2
+LZ_VERSION=v2.0.3
 
 # 项目标识
 PROJECT_ID="lzrules"
@@ -401,6 +401,11 @@ check_suport_evn() {
         if [ -z "$( opkg list-installed "wget-ssl" 2> /dev/null )" ] || ! which wget > /dev/null 2>&1; then
             echo "$(lzdate)" [$$]: Package wget-ssl is not installed or corrupt.
             logger -p 1 "[$$]: Package wget-ssl is not installed or corrupt."
+            retval="1"
+        fi
+        if ! which ipset > /dev/null 2>&1; then
+            echo "$(lzdate)" [$$]: Package ipset is not installed.
+            logger -p 1 "[$$]: Package ipset is not installed."
             retval="1"
         fi
         if [ -z "$( opkg list-installed "dnsmasq-full" 2> /dev/null )" ] || ! which wget > /dev/null 2>&1; then
@@ -868,7 +873,7 @@ get_isp_name() {
     if [ -n "${1}" ]; then
         until [ "${index}" -ge "${ISP_TOTAL}" ]
         do
-            eval add_net_address_sets "${PATH_DATA}/\${ISP_DATA_${index}}" "${tmp_isp_set}"
+            eval add_net_address_sets "\${PATH_DATA}/\${ISP_DATA_${index}}" "${tmp_isp_set}"
             if ipset -q test "${tmp_isp_set}" "${1}"; then
                 eval retval="\${ISP_NAME_${index}}"
                 break
@@ -891,7 +896,7 @@ get_isp_name_v6() {
         else
             until [ "${index}" -ge "${ISP_TOTAL}" ]
             do
-                eval add_ipv6_net_address_sets "${PATH_DATA}/\${ISP_V6_DATA_${index}}" "${tmp_isp_set}"
+                eval add_ipv6_net_address_sets "\${PATH_DATA}/\${ISP_V6_DATA_${index}}" "${tmp_isp_set}"
                 if ipset -q test "${tmp_isp_set}" "${1}"; then
                     eval retval="\${ISP_V6_NAME_${index}}"
                     break
@@ -983,16 +988,16 @@ load_ipsets() {
     do
         eval port="\${ISP_${index}_WAN_PORT}"
         if [ "${port}" -lt "${MAX_WAN_PORT}" ]; then
-            eval add_net_address_sets "${PATH_DATA}/\${ISP_DATA_${index}}" "\${ISPIP_SET_${port}}"
+            eval add_net_address_sets "\${PATH_DATA}/\${ISP_DATA_${index}}" "\${ISPIP_SET_${port}}"
             wan="$( get_wan_name "${port}" )"
         elif [ "${port}" = "${MAX_WAN_PORT}" ]; then
-            eval add_net_address_sets "${PATH_DATA}/\${ISP_DATA_${index}}" "${ISPIP_SET_B}"
+            eval add_net_address_sets "\${PATH_DATA}/\${ISP_DATA_${index}}" "${ISPIP_SET_B}"
             wan="LB"
         else
             wan="OFF"
         fi
         eval name="\${ISP_NAME_${index}}"
-        eval num="\$( get_ipv4_data_file_item_total ${PATH_DATA}/\${ISP_DATA_${index}} )"
+        eval num="\$( get_ipv4_data_file_item_total \"\${PATH_DATA}/\${ISP_DATA_${index}}\" )"
         printf "%s %s\t%s\t\t%s\n" "$(lzdate) [$$]:  " "${name}" "${wan}" "${num}" 
         logger -p 1 "$( printf "%s %-11s\t%-6s\t%s\n" "[$$]:  " "${name}" "${wan}" "${num}" )"
         index="$(( index + 1 ))"
@@ -1004,16 +1009,16 @@ load_ipsets() {
     do
         eval port="\${ISP_${index}_WAN_PORT_V6}"
         if [ "${port}" -lt "${MAX_WAN_PORT}" ]; then
-            eval add_ipv6_net_address_sets "${PATH_DATA}/\${ISP_V6_DATA_${index}}" "\${ISPIP_V6_SET_${port}}"
+            eval add_ipv6_net_address_sets "\${PATH_DATA}/\${ISP_V6_DATA_${index}}" "\${ISPIP_V6_SET_${port}}"
             wan="$( get_wan_name_v6 "${port}" )"
         elif [ "${port}" = "${MAX_WAN_PORT}" ]; then
-            eval add_ipv6_net_address_sets "${PATH_DATA}/\${ISP_V6_DATA_${index}}" "${ISPIP_V6_SET_B}"
+            eval add_ipv6_net_address_sets "\${PATH_DATA}/\${ISP_V6_DATA_${index}}" "${ISPIP_V6_SET_B}"
             wan="LB"
         else
             wan="OFF"
         fi
         eval name="\${ISP_V6_NAME_${index}}"
-        eval num="\$( get_ipv6_data_file_item_total ${PATH_DATA}/\${ISP_V6_DATA_${index}} )"
+        eval num="\$( get_ipv6_data_file_item_total \"\${PATH_DATA}/\${ISP_V6_DATA_${index}}\" )"
         printf "%s %s\t%s\t\t%s\n" "$(lzdate) [$$]:  " "${name}" "${wan}" "${num}" 
         logger -p 1 "$( printf "%s %-11s\t%-6s\t%s\n" "[$$]:  " "${name}" "${wan}" "${num}" )"
         index="$(( index + 1 ))"
@@ -1048,13 +1053,13 @@ create_url_list() {
     local index="0"
     until [ "${index}" -ge "${ISP_TOTAL}" ]
     do
-        eval echo "${UPDATE_ISPIP_DATA_DOWNLOAD_URL}/\${ISP_DATA_${index}}" >> "${PATH_TMP_DATA}/${ISPIP_FILE_URL_LIST}" 2> /dev/null
+        eval echo "\${UPDATE_ISPIP_DATA_DOWNLOAD_URL}/\${ISP_DATA_${index}}" >> "${PATH_TMP_DATA}/${ISPIP_FILE_URL_LIST}" 2> /dev/null
         index="$(( index + 1 ))"
     done
     index="0"
     until [ "${index}" -ge "${ISP_TOTAL}" ]
     do
-        eval echo "${UPDATE_ISPIP_DATA_DOWNLOAD_URL}/\${ISP_V6_DATA_${index}}" >> "${PATH_TMP_DATA}/${ISPIP_FILE_URL_LIST}" 2> /dev/null
+        eval echo "\${UPDATE_ISPIP_DATA_DOWNLOAD_URL}/\${ISP_V6_DATA_${index}}" >> "${PATH_TMP_DATA}/${ISPIP_FILE_URL_LIST}" 2> /dev/null
         index="$(( index + 1 ))"
     done
 }
@@ -1113,7 +1118,7 @@ check_isp_data() {
     local index="0"
     until [ "${index}" -ge "${ISP_TOTAL}" ]
     do
-        eval [ ! -f "${PATH_DATA}/\${ISP_DATA_${index}}" ] && return "1"
+        eval [ ! -f "\${PATH_DATA}/\${ISP_DATA_${index}}" ] && return "1"
         index="$(( index + 1 ))"
     done
     return "0"
@@ -1177,6 +1182,7 @@ load_update_task() {
 
 unload_update_task() {
     ! crontab -l 2> /dev/null | grep -q "^[^#]*${PROJECT_ID}" && {
+        sed -i "/^[^#]*${PROJECT_ID}/d" "${CRONTABS_ROOT_FILENAME}" > /dev/null 2>&1
         echo "$(lzdate)" [$$]: No scheduled update task.
         logger -p 1 "[$$]: No scheduled update task."
         return
@@ -1233,7 +1239,7 @@ command_parsing() {
         unload_update_task
         unload_system_boot
         delete_ipsets
-        [ -f "${CUSTOM_IPSETS_TMP_LST_FILENAME}" ] && rm -f "${CUSTOM_IPSETS_TMP_LST_FILENAME}" > /dev/null 2>&1
+        rm -f "${CUSTOM_IPSETS_TMP_LST_FILENAME}" > /dev/null 2>&1
         echo "$(lzdate)" [$$]: All ISP data have been unloaded.
         logger -p 1 "[$$]: All ISP data have been unloaded."
         return "1"
