@@ -1,5 +1,5 @@
 #!/bin/sh
-# lzrules.sh v2.0.4
+# lzrules.sh v2.0.5
 # By LZ 妙妙呜 (larsonzhang@gmail.com)
 
 # LZ RULES script for OpenWrt based router
@@ -255,16 +255,16 @@ ISP_NAME_8="MACAO      "
 ISP_NAME_9="TAIWAN     "
 
 # 国内ISP网络运营商名称
-ISP_V6_NAME_0="CTCC_V6    "
-ISP_V6_NAME_1="CUCC/CNC_V6"
-ISP_V6_NAME_2="CMCC_V6    "
-ISP_V6_NAME_3="CRTC_V6    "
-ISP_V6_NAME_4="CERNET_V6  "
-ISP_V6_NAME_5="GWBN_V6    "
-ISP_V6_NAME_6="OTHER_V6   "
-ISP_V6_NAME_7="HONGKONG_V6"
-ISP_V6_NAME_8="MACAO_V6   "
-ISP_V6_NAME_9="TAIWAN_V6  "
+ISP_V6_NAME_0="V6_CTCC    "
+ISP_V6_NAME_1="V6_CUCC/CNC"
+ISP_V6_NAME_2="V6_CMCC    "
+ISP_V6_NAME_3="V6_CRTC    "
+ISP_V6_NAME_4="V6_CERNET  "
+ISP_V6_NAME_5="V6_GWBN    "
+ISP_V6_NAME_6="V6_OTHER   "
+ISP_V6_NAME_7="V6_HONGKONG"
+ISP_V6_NAME_8="V6_MACAO   "
+ISP_V6_NAME_9="V6_TAIWAN  "
 
 # IPv4 WAN端口设备列表
 WAN_DEV_LIST="${WAN_DEV_LIST:-""}"
@@ -288,7 +288,7 @@ CUSTOM_V6_IPSETS_LST=""
 DNAME_IPSETS_LST=""
 
 # 版本号
-LZ_VERSION=v2.0.4
+LZ_VERSION=v2.0.5
 
 # 项目标识
 PROJECT_ID="lzrules"
@@ -512,6 +512,13 @@ get_wan_dev_list() {
 get_wan_if() {
     local wan="${1}"
     [ -n "${WAN_DEV_LIST}" ] && wan="$( echo "${WAN_DEV_LIST}" | awk '$2 == "'"${wan}"'" {print $1; exit}' )"
+    [ -z "${wan}" ] && wan="${1}"
+    echo "${wan}"
+}
+
+get_wan_dev() {
+    local wan="${1}"
+    [ -n "${WAN_DEV_LIST}" ] && wan="$( echo "${WAN_DEV_LIST}" | awk '$1 == "'"${wan}"'" {print $2; exit}' )"
     [ -z "${wan}" ] && wan="${1}"
     echo "${wan}"
 }
@@ -916,7 +923,7 @@ get_isp_name_v6() {
 }
 
 print_wan_ip() {
-    local ifn="$( ip route show 2> /dev/null | awk '/default/ {if ($5 != "") print $5}' )" ifx="" item="" lined="0"
+    local ifn="$( ip route show 2> /dev/null | awk '/default/ {print $5}' )" ifx="" item="" lined="0"
     for ifn in ${ifn}
     do
         [ "${lined}" = "0" ] && {
@@ -950,10 +957,11 @@ print_wan_ip() {
     done
     lined="0"
     local strbuf="" count="0"
-    ifn="$( echo "${WAN_V6_DEV_LIST}" | awk '$1 !~ /X$/ && $2 !~ /X$/ {print $2}' )"
+    ifn="$( ip -6 route show 2> /dev/null | awk '/default/ {print $7}' )"
     for ifn in ${ifn}
     do
-        ifx="$( get_wan_if_v6 "${ifn}" )"
+        ifx="$( get_wan_if_v6 "$( get_wan_dev "${ifn#*pppoe-}" )" )"
+        echo "${ifn}" | grep -q '^pppoe-' && ifx="${ifx} pppoe"
         item="$( ip -6 -o address show dev "${ifn}" 2> /dev/null \
             | awk 'NF != "0" {
                 ifa=$4;
@@ -967,7 +975,7 @@ print_wan_ip() {
             if [ "${count}" = "0" ]; then
                 strbuf="$( printf "%s %-8s %s  %s\n" "[$$]:  " "${ifx}" "${item}" "$( get_isp_name_v6 "${item}" )" )"
             else
-                strbuf="$( printf "%s %-8s %s  %s\n" "[$$]:  " "" "${item}" "$( get_isp_name_v6 "${item}" )" )"
+                strbuf="$( printf "%s %-8s %s  %s\n" "[$$]:  " "$( printf "%${#ifx}s" )" "${item}" "$( get_isp_name_v6 "${item}" )" )"
             fi
             [ "${lined}" = "0" ] && {
                 lined="1"
