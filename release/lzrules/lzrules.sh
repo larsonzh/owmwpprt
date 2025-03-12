@@ -1,5 +1,5 @@
 #!/bin/sh
-# lzrules.sh v2.0.5
+# lzrules.sh v2.0.6
 # By LZ 妙妙呜 (larsonzhang@gmail.com)
 
 # LZ RULES script for OpenWrt based router
@@ -288,7 +288,7 @@ CUSTOM_V6_IPSETS_LST=""
 DNAME_IPSETS_LST=""
 
 # 版本号
-LZ_VERSION=v2.0.5
+LZ_VERSION=v2.0.6
 
 # 项目标识
 PROJECT_ID="lzrules"
@@ -568,7 +568,7 @@ print_ipv4_address_list() {
             return ip_value;
         } \
         NF == "1" && !i[$1]++ {print fix_cidr($1);}' \
-        | awk 'NF == "1" && !i[$1]++ {print $1}'
+        | awk 'NF == "1" && $1 != "0.0.0.0/0" && !i[$1]++ {print $1}'
 }
 
 print_ipv6_address_list() {
@@ -923,7 +923,7 @@ get_isp_name_v6() {
 }
 
 print_wan_ip() {
-    local ifn="$( ip route show 2> /dev/null | awk '/default/ {print $5}' )" ifx="" item="" lined="0"
+    local ifn="$( ip route show 2> /dev/null | awk '/default/ {print $5}' | awk 'NF == "1" && !i[$1]++ {print $1}' )" ifx="" item="" lined="0"
     for ifn in ${ifn}
     do
         [ "${lined}" = "0" ] && {
@@ -935,19 +935,23 @@ print_wan_ip() {
         eval "$( ip -4 -o address show dev "${ifn}" 2> /dev/null \
             | awk 'NF != "0" {
                 ifa=$4;
-                psn=index(ifa, "/");
-                if (psn > 0) ifa=substr(ifa, 1, psn-1);
-                if (index($2, "pppoe") > 0)
-                    print $2,ifa,system("curl -s --connect-timeout 20 --interface "$2"'" -w 'OpenWrt' ${PIPDN}"'"" 2> /dev/null");
+                gsub(/\/.*$/, "", ifa);
+                if ($2 ~ /^pppoe-/)
+                    print $2,ifa,system("curl -s --connect-timeout 10 --interface "$2"'" ${PIPDN}"'"" 2> /dev/null | grep -Eo \"""'"${regex_v4%"([\/]("*}"'""\"");
                 else
-                    print $2,ifa,system("curl -s --connect-timeout 20 --interface "ifa"'" -w 'OpenWrt' ${PIPDN}"'"" 2> /dev/null");
+                    print $2,ifa,system("curl -s --connect-timeout 10 --interface "ifa"'" ${PIPDN}"'"" 2> /dev/null | grep -Eo \"""'"${regex_v4%"([\/]("*}"'""\"");
             }' \
-            | awk -F 'OpenWrt' '{print $1}' \
+            | awk 'NF >= "2" {
+                if (NF == "2")
+                    print $1,$2,system("wget -T 10 --bind-address="$2"'" -qO - ${PIPDN}"'"" 2> /dev/null | grep -Eo \"""'"${regex_v4%"([\/]("*}"'""\"");
+                else
+                    print $0;
+            }' \
             | awk 'NF >= "2" {
                 print "echo "$1" "$2" \"\$( get_isp_name \""$3"\" )\" "$3;
             }' )" \
             | awk 'NF >= "2" {
-                wanip="No Public IP";
+                wanip="Public IP Fetch Failed.";
                 if ($4 != "") {wanip=$4; isp=$3;}
                 else isp="";
                 strbuf=sprintf("%s   %-8s %-12s  %-12s  %s","'"[$$]:"'","'"${ifx}"'",$2,wanip,isp);
@@ -957,7 +961,7 @@ print_wan_ip() {
     done
     lined="0"
     local strbuf="" count="0"
-    ifn="$( ip -6 route show 2> /dev/null | awk '/default/ {print $7}' )"
+    ifn="$( ip -6 route show 2> /dev/null | awk '/default/ {print $7}' | awk 'NF == "1" && !i[$1]++ {print $1}' )"
     for ifn in ${ifn}
     do
         ifx="$( get_wan_if_v6 "$( get_wan_dev "${ifn#*pppoe-}" )" )"
@@ -965,8 +969,7 @@ print_wan_ip() {
         item="$( ip -6 -o address show dev "${ifn}" 2> /dev/null \
             | awk 'NF != "0" {
                 ifa=$4;
-                psn=index(ifa, "/");
-                if (psn > 0) ifa=substr(ifa, 1, psn-1);
+                gsub(/\/.*$/, "", ifa);
                 print ifa;
             }' )"
         count="0"
