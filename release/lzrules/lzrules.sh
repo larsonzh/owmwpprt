@@ -1,5 +1,5 @@
 #!/bin/sh
-# lzrules.sh v2.0.6
+# lzrules.sh v2.0.7
 # By LZ 妙妙呜 (larsonzhang@gmail.com)
 
 # LZ RULES script for OpenWrt based router
@@ -288,7 +288,7 @@ CUSTOM_V6_IPSETS_LST=""
 DNAME_IPSETS_LST=""
 
 # 版本号
-LZ_VERSION=v2.0.6
+LZ_VERSION=v2.0.7
 
 # 项目标识
 PROJECT_ID="lzrules"
@@ -693,11 +693,11 @@ get_wan_list() {
 }
 
 get_ipset_total() {
-    ipset -q list "${1}" | grep -Ec "^${regex_v4}$"
+    ipset -q list "${1}" | awk -v count="0" '$1 ~ "'"^${regex_v4}$"'" {count++} END{print count}'
 }
 
 get_ipv6_ipset_total() {
-    ipset -q list "${1}" | grep -Ec "^${regex_v6}$"
+    ipset -q list "${1}" | awk -v count="0" '$1 ~ "'"^${regex_v6}$"'" {count++} END{print count}'
 }
 
 print_wan_ispip_item_num() {
@@ -942,7 +942,7 @@ print_wan_ip() {
                     print $2,ifa,system("curl -s --connect-timeout 10 --interface "ifa"'" ${PIPDN}"'"" 2> /dev/null | grep -Eo \"""'"${regex_v4%"([\/]("*}"'""\"");
             }' \
             | awk 'NF >= "2" {
-                if (NF == "2")
+                if ($3 !~ "'"^${regex_v4%"([\/]("*}$"'")
                     print $1,$2,system("wget -T 10 --bind-address="$2"'" -qO - ${PIPDN}"'"" 2> /dev/null | grep -Eo \"""'"${regex_v4%"([\/]("*}"'""\"");
                 else
                     print $0;
@@ -952,8 +952,8 @@ print_wan_ip() {
             }' )" \
             | awk 'NF >= "2" {
                 wanip="Public IP Fetch Failed.";
-                if ($4 != "") {wanip=$4; isp=$3;}
-                else isp="";
+                isp="";
+                if ($4 ~ "'"^${regex_v4%"([\/]("*}$"'") {wanip=$4; isp=$3;}
                 strbuf=sprintf("%s   %-8s %-12s  %-12s  %s","'"[$$]:"'","'"${ifx}"'",$2,wanip,isp);
                 printf("%s %s\n","'"$(lzdate)"'",strbuf);
                 system("logger -p 1 \""strbuf"\"");
