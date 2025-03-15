@@ -1,5 +1,5 @@
 #!/bin/sh
-# lzrules.sh v2.0.7
+# lzrules.sh v2.0.8
 # By LZ 妙妙呜 (larsonzhang@gmail.com)
 
 # LZ RULES script for OpenWrt based router
@@ -288,7 +288,7 @@ CUSTOM_V6_IPSETS_LST=""
 DNAME_IPSETS_LST=""
 
 # 版本号
-LZ_VERSION=v2.0.7
+LZ_VERSION=v2.0.8
 
 # 项目标识
 PROJECT_ID="lzrules"
@@ -348,7 +348,11 @@ CUSTOM_IPSETS_TMP_LST_FILENAME="${PATH_TMP}/custom_ipsets_tmp.lst"
 regex_v4='((25[0-5]|(2[0-4]|1[0-9]|[1-9])?[0-9])[\.]){3}(25[0-5]|(2[0-4]|1[0-9]|[1-9])?[0-9])([\/]([1-9]|[1-2][0-9]|3[0-2]))?'
 
 # IPv6地址正则表达式
-regex_v6="(([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:([0-9a-fA-F]{1,4})|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{1,4}){0,4}%[0-9a-zA-Z]+|::(ffff(:0{1,4})?:)?${regex_v4%"([\/]("*}|([0-9a-fA-F]{1,4}:){1,4}:${regex_v4%"([\/]("*})([\/]([1-9]|([1-9]|1[0-1])[0-9]|12[0-8]))?"
+regex_v6='(([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:([0-9a-fA-F]{1,4})|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{1,4}){0,4}%[0-9a-zA-Z]+|::(ffff(:0{1,4})?:)?REGEX_IPV4|([0-9a-fA-F]{1,4}:){1,4}:REGEX_IPV4)([\/]([1-9]|([1-9]|1[0-1])[0-9]|12[0-8]))?'
+regex_v6="$( echo "${regex_v6}" | sed "s/REGEX_IPV4/${regex_v4%"([\/]("*}/g" )"
+
+# 用户自定义网络出口源地址外部访问策略规则路优先级
+CUSTOM_PRIO="500"
 
 # 脚本操作命令
 HAMMER="$( echo "${1}" | tr '[:A-Z:]' '[:a-z:]' )"
@@ -544,6 +548,48 @@ get_wan_name_v6() {
     echo "${wan}"
 }
 
+add_custom_rule() {
+    local tableID="1" ifn="" count="0"
+    until [ "${tableID}" -gt "$(( WAN_AVAL_NUM + WAN_V6_AVAL_NUM ))" ]
+    do
+        ifn="$( ip route show table "${tableID}" 2> /dev/null | awk '/default/ {print $5}' | awk 'NF == "1" && !i[$1]++ {print $1}' )"
+        for ifn in ${ifn}
+        do
+            eval "$( ip -4 -o address show dev "${ifn}" 2> /dev/null | awk -v count="0" 'NF != "0" && $4 ~ "'"^${regex_v4}$"'" {
+                ifa=$4;
+                gsub(/\/.*$/, "", ifa);
+                print "ip rule add from "ifa" table ""'"${tableID}"'"" prio ""'"${CUSTOM_PRIO}"'"" > /dev/null 2>&1";
+                count++;
+            } END{
+                if (count != "0")
+                    print "count=\"$(( count + 1 ))\"";
+            }' )"
+        done
+        tableID="$(( tableID + 1 ))"
+    done
+    [ "${count}" != "0" ] && ip route flush cache > /dev/null 2>&1
+    tableID="1" ifn="" count="0"
+    until [ "${tableID}" -gt "$(( WAN_AVAL_NUM + WAN_V6_AVAL_NUM ))" ]
+    do
+        ifn="$( ip -6 route show table "${tableID}" 2> /dev/null | awk '/default/ {print $5}' | awk 'NF == "1" && !i[$1]++ {print $1}' )"
+        for ifn in ${ifn}
+        do
+            eval "$( ip -6 -o address show dev "${ifn}" 2> /dev/null \
+                | awk -v count="0" 'NF != "0" && $4 ~ "'"^${regex_v6}$"'" && $4 !~ /^[fF][eE][89abAB][0-9a-fA-F]:/ {
+                ifa=$4;
+                gsub(/\/.*$/, "", ifa);
+                print "ip -6 rule add from "ifa" table ""'"${tableID}"'"" prio ""'"${CUSTOM_PRIO}"'"" > /dev/null 2>&1";
+                count++;
+            } END{
+                if (count != "0")
+                    print "count=\"$(( count + 1 ))\"";
+            }' )"
+        done
+        tableID="$(( tableID + 1 ))"
+    done
+    [ "${count}" != "0" ] && ip -6 route flush cache > /dev/null 2>&1
+}
+
 print_ipv4_address_list() {
     sed -e 's/^[[:space:]]\+//g' -e 's/[[:space:]#].*$//g' \
         -e 's/\(^\|[^[:digit:]]\)[0]\+\([[:digit:]]\)/\1\2/g' \
@@ -577,6 +623,25 @@ print_ipv6_address_list() {
         -e "/^$( echo "${regex_v6}" | sed 's/[(){}|+?]/\\&/g' )$/!d" \
         -e 's/\/128//g' "${1}" \
         | awk 'NF == "1" && !i[$1]++ {print tolower($1)}'
+}
+
+delete_custom_rule() {
+    eval "$( ip rule show | awk -v count="0" '$1 == "'"${CUSTOM_PRIO}:"'" \
+        && $2 == "from" && $3 ~ "'"^${regex_v4%"([\/]("*}$"'" && $4 == "lookup" && NF == "5" {
+        print "ip rule del "$2" "$3" table "$5" prio ""'"${CUSTOM_PRIO}"'"" > /dev/null 2>&1";
+        count++;
+    } END{
+        if (count != "0")
+            print "ip route flush cache > /dev/null 2>&1";
+    }' )"
+    eval "$( ip -6 rule show | awk -v count="0" '$1 == "'"${CUSTOM_PRIO}:"'" \
+        && $2 == "from" && $3 ~ "'"^${regex_v6%"([\/]("*}$"'" && $4 == "lookup" && NF == "5" {
+        print "ip -6 rule del "$2" "$3" table "$5" prio ""'"${CUSTOM_PRIO}"'"" > /dev/null 2>&1";
+        count++;
+    } END{
+        if (count != "0")
+            print "ip -6 route flush cache > /dev/null 2>&1";
+    }' )"
 }
 
 delete_ipsets() {
@@ -1249,6 +1314,7 @@ command_parsing() {
         unload_update_task
         unload_system_boot
         delete_ipsets
+        delete_custom_rule
         rm -f "${CUSTOM_IPSETS_TMP_LST_FILENAME}" > /dev/null 2>&1
         echo "$(lzdate)" [$$]: All ISP data have been unloaded.
         logger -p 1 "[$$]: All ISP data have been unloaded."
@@ -1297,7 +1363,9 @@ do
     command_parsing || break
     ! check_isp_data && { ! update_isp_data && break; }
     cleaning_user_data
+    delete_custom_rule
     get_wan_dev_list
+    add_custom_rule
     delete_ipsets
     create_ipsets
     load_ipsets
