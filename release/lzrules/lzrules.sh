@@ -1,5 +1,5 @@
 #!/bin/sh
-# lzrules.sh v2.0.8
+# lzrules.sh v2.0.9
 # By LZ 妙妙呜 (larsonzhang@gmail.com)
 
 # LZ RULES script for OpenWrt based router
@@ -288,7 +288,7 @@ CUSTOM_V6_IPSETS_LST=""
 DNAME_IPSETS_LST=""
 
 # 版本号
-LZ_VERSION=v2.0.8
+LZ_VERSION=v2.0.9
 
 # 项目标识
 PROJECT_ID="lzrules"
@@ -329,8 +329,17 @@ UPDATE_ISPIP_DATA_DOWNLOAD_URL="https://ispip.clang.cn"
 # ISP网络运营商CIDR网段数据文件URL列表文件名
 ISPIP_FILE_URL_LIST="ispip_file_url.lst"
 
-# 公网IPv4地址查询网站域名
+# 公网出口IPv4地址查询网站域名
 PIPDN="whatismyip.akamai.com"
+
+# 公网出口IPv4地址查询备用网站域名
+PIPDNX="checkip.amazonaws.com"
+
+# 公网出口IPv4地址查询备用网站静态IP地址
+PIPDNX_ADDR="18.139.52.174"
+
+# 公网出口IPv4地址查询备用网站域名DNS服务器
+PDNXS="8.8.8.8"
 
 # 用户自定义IPv4网址/网段数据集合列表文件名
 CUSTOM_IPSETS_LST_FILENAME="${PATH_DATA}/custom_ipsets_lst.txt"
@@ -452,6 +461,8 @@ cleaning_user_data() {
     ! echo "${CUSTOM_IPSETS}" | grep -q '^[0-1]$' && CUSTOM_IPSETS=1
     ! echo "${CUSTOM_V6_IPSETS}" | grep -q '^[0-1]$' && CUSTOM_V6_IPSETS=1
     ! echo "${DNAME_IPSETS}" | grep -q '^[0-1]$' && DNAME_IPSETS=1
+    ! echo "${PIPDNX_ADDR}" | grep -qE "^${regex_v4%"([\/]("*}$" && PIPDNX_ADDR="18.139.52.174"
+    ! echo "${PDNXS}" | grep -qE "^${regex_v4%"([\/]("*}$" && PDNXS="8.8.8.8"
 }
 
 get_wan_dev_if() {
@@ -537,14 +548,14 @@ get_wan_if_v6() {
 get_wan_name() {
     local index="${1}" wan="" 
     index="$(( index + 1 ))"
-    [ -n "${WAN_DEV_LIST}" ] && wan="$( echo "${WAN_DEV_LIST}" | awk 'NR == "'"${index}"'" {print $1}' )"
+    [ -n "${WAN_DEV_LIST}" ] && wan="$( echo "${WAN_DEV_LIST}" | awk 'NR == ("'"${index}"'" + 0) {print $1}' )"
     echo "${wan}"
 }
 
 get_wan_name_v6() {
     local index="${1}" wan="" 
     index="$(( index + 1 ))"
-    [ -n "${WAN_V6_DEV_LIST}" ] && wan="$( echo "${WAN_V6_DEV_LIST}" | awk 'NR == "'"${index}"'" {print $1}' )"
+    [ -n "${WAN_V6_DEV_LIST}" ] && wan="$( echo "${WAN_V6_DEV_LIST}" | awk 'NR == ("'"${index}"'" + 0) {print $1}' )"
     echo "${wan}"
 }
 
@@ -552,18 +563,18 @@ add_custom_rule() {
     local tableID="1" ifn="" count="0"
     until [ "${tableID}" -gt "$(( WAN_AVAL_NUM + WAN_V6_AVAL_NUM ))" ]
     do
-        ifn="$( ip route show table "${tableID}" 2> /dev/null | awk '/default/ {print $5}' | awk 'NF == "1" && !i[$1]++ {print $1}' )"
+        ifn="$( ip route show table "${tableID}" 2> /dev/null | awk '/default/ {print $5}' | awk 'NF == 1 && !i[$1]++ {print $1}' )"
         for ifn in ${ifn}
         do
-            eval "$( ip -4 -o address show dev "${ifn}" 2> /dev/null | awk -v count="0" 'NF != "0" && $4 ~ "'"^${regex_v4}$"'" {
+            eval "$( ip -4 -o address show dev "${ifn}" 2> /dev/null | awk 'NF != 0 && $4 ~ "'"^${regex_v4}$"'" {
                 ifa=$4;
                 gsub(/\/.*$/, "", ifa);
                 print "ip rule add from "ifa" table ""'"${tableID}"'"" prio ""'"${CUSTOM_PRIO}"'"" > /dev/null 2>&1";
-                count++;
-            } END{
-                if (count != "0")
-                    print "count=\"$(( count + 1 ))\"";
             }' )"
+            if [ "${count}" = "0" ]; then
+                ip rule add from 0.0.0.0 to "${PDNXS}" table "${tableID}" prio "${CUSTOM_PRIO}" > /dev/null 2>&1
+                count="$(( count + 1 ))"
+            fi
         done
         tableID="$(( tableID + 1 ))"
     done
@@ -571,11 +582,11 @@ add_custom_rule() {
     tableID="1" ifn="" count="0"
     until [ "${tableID}" -gt "$(( WAN_AVAL_NUM + WAN_V6_AVAL_NUM ))" ]
     do
-        ifn="$( ip -6 route show table "${tableID}" 2> /dev/null | awk '/default/ {print $5}' | awk 'NF == "1" && !i[$1]++ {print $1}' )"
+        ifn="$( ip -6 route show table "${tableID}" 2> /dev/null | awk '/default/ {print $5}' | awk 'NF == 1 && !i[$1]++ {print $1}' )"
         for ifn in ${ifn}
         do
             eval "$( ip -6 -o address show dev "${ifn}" 2> /dev/null \
-                | awk -v count="0" 'NF != "0" && $4 ~ "'"^${regex_v6}$"'" && $4 !~ /^[fF][eE][89abAB][0-9a-fA-F]:/ {
+                | awk -v count="0" 'NF != 0 && $4 ~ "'"^${regex_v6}$"'" && $4 !~ /^[fF][eE][89abAB][0-9a-fA-F]:/ {
                 ifa=$4;
                 gsub(/\/.*$/, "", ifa);
                 print "ip -6 rule add from "ifa" table ""'"${tableID}"'"" prio ""'"${CUSTOM_PRIO}"'"" > /dev/null 2>&1";
@@ -613,8 +624,8 @@ print_ipv4_address_list() {
             delete arr;
             return ip_value;
         } \
-        NF == "1" && !i[$1]++ {print fix_cidr($1);}' \
-        | awk 'NF == "1" && $1 != "0.0.0.0/0" && !i[$1]++ {print $1}'
+        NF == 1 && !i[$1]++ {print fix_cidr($1);}' \
+        | awk 'NF == 1 && $1 != "0.0.0.0/0" && !i[$1]++ {print $1}'
 }
 
 print_ipv6_address_list() {
@@ -622,20 +633,25 @@ print_ipv6_address_list() {
         -e 's/\(^\|[\:\/\%]\)[0]\+\([[:digit:]]\)/\1\2/g' \
         -e "/^$( echo "${regex_v6}" | sed 's/[(){}|+?]/\\&/g' )$/!d" \
         -e 's/\/128//g' "${1}" \
-        | awk 'NF == "1" && !i[$1]++ {print tolower($1)}'
+        | awk 'NF == 1 && !i[$1]++ {print tolower($1)}'
 }
 
 delete_custom_rule() {
     eval "$( ip rule show | awk -v count="0" '$1 == "'"${CUSTOM_PRIO}:"'" \
-        && $2 == "from" && $3 ~ "'"^${regex_v4%"([\/]("*}$"'" && $4 == "lookup" && NF == "5" {
+        && $2 == "from" && $3 ~ "'"^${regex_v4%"([\/]("*}$"'" && $4 == "lookup" && NF == 5 {
         print "ip rule del "$2" "$3" table "$5" prio ""'"${CUSTOM_PRIO}"'"" > /dev/null 2>&1";
+        count++;
+        next;
+    } $1 == "'"${CUSTOM_PRIO}:"'" && $2 == "from" && $3 == "0.0.0.0" && $4 == "to" && $5 ~ "'"^${regex_v4%"([\/]("*}$"'" \
+        && $6 == "lookup" && NF == 7 {
+        print "ip rule del "$2" "$3" to "$5" table "$7" prio ""'"${CUSTOM_PRIO}"'"" > /dev/null 2>&1";
         count++;
     } END{
         if (count != "0")
             print "ip route flush cache > /dev/null 2>&1";
     }' )"
     eval "$( ip -6 rule show | awk -v count="0" '$1 == "'"${CUSTOM_PRIO}:"'" \
-        && $2 == "from" && $3 ~ "'"^${regex_v6%"([\/]("*}$"'" && $4 == "lookup" && NF == "5" {
+        && $2 == "from" && $3 ~ "'"^${regex_v6%"([\/]("*}$"'" && $4 == "lookup" && NF == 5 {
         print "ip -6 rule del "$2" "$3" table "$5" prio ""'"${CUSTOM_PRIO}"'"" > /dev/null 2>&1";
         count++;
     } END{
@@ -721,14 +737,14 @@ create_ipsets() {
 add_net_address_sets() {
     if [ ! -s "${1}" ] || [ -z "${2}" ]; then return; fi;
     ipset -q create "${2}" hash:net maxelem 4294967295 #--hashsize 1024 mexleme 65536
-    print_ipv4_address_list "${1}" | awk 'NF >= "1" {print "'"-! del ${2} "'"$1"'"\n-! add ${2} "'"$1} END{print "COMMIT"}' | ipset restore > /dev/null 2>&1
+    print_ipv4_address_list "${1}" | awk 'NF >= 1 {print "'"-! del ${2} "'"$1"'"\n-! add ${2} "'"$1} END{print "COMMIT"}' | ipset restore > /dev/null 2>&1
 }
 
 get_ipv4_data_file_item_total() {
     local retval="0"
     [ -s "${1}" ] && {
         retval="$( print_ipv4_address_list "${1}" 2> /dev/null \
-            | awk -v count="0" 'NF >= "1" {count++} END{print count}' )"
+            | awk -v count="0" 'NF >= 1 {count++} END{print count}' )"
     }
     echo "${retval}"
 }
@@ -736,14 +752,14 @@ get_ipv4_data_file_item_total() {
 add_ipv6_net_address_sets() {
     if [ ! -s "${1}" ] || [ -z "${2}" ]; then return; fi;
     ipset -q create "${2}" hash:net family ipv6 maxelem 4294967295 #--hashsize 1024 mexleme 65536
-    print_ipv6_address_list "${1}" | awk 'NF >= "1" {print "'"-! del ${2} "'"$1"'"\n-! add ${2} "'"$1} END{print "COMMIT"}' | ipset restore > /dev/null 2>&1
+    print_ipv6_address_list "${1}" | awk 'NF >= 1 {print "'"-! del ${2} "'"$1"'"\n-! add ${2} "'"$1} END{print "COMMIT"}' | ipset restore > /dev/null 2>&1
 }
 
 get_ipv6_data_file_item_total() {
     local retval="0"
     [ -s "${1}" ] && {
         retval="$( print_ipv6_address_list "${1}" 2> /dev/null \
-            | awk -v count="0" 'NF >= "1" {count++} END{print count}' )"
+            | awk -v count="0" 'NF >= 1 {count++} END{print count}' )"
     }
     echo "${retval}"
 }
@@ -988,7 +1004,13 @@ get_isp_name_v6() {
 }
 
 print_wan_ip() {
-    local ifn="$( ip route show 2> /dev/null | awk '/default/ {print $5}' | awk 'NF == "1" && !i[$1]++ {print $1}' )" ifx="" item="" lined="0"
+    local siteIP="${PIPDNX_ADDR}"
+    eval "$( nslookup "${PIPDNX}" "${PDNXS}" 2> /dev/null \
+        | awk -v x=0 'NR > 4 && $2 ~ "'"^${regex_v4%"([\/]("*}$"'" {
+        print "siteIP=\""$2"\"";
+        exit;
+    }' )"
+    local ifn="$( ip route show 2> /dev/null | awk '/default/ {print $5}' | awk 'NF == 1 && !i[$1]++ {print $1}' )" ifx="" item="" lined="0"
     for ifn in ${ifn}
     do
         [ "${lined}" = "0" ] && {
@@ -998,7 +1020,7 @@ print_wan_ip() {
         }
         ifx="$( get_wan_if "${ifn}" )"
         eval "$( ip -4 -o address show dev "${ifn}" 2> /dev/null \
-            | awk 'NF != "0" {
+            | awk 'NF != 0 {
                 ifa=$4;
                 gsub(/\/.*$/, "", ifa);
                 if ($2 ~ /^pppoe-/)
@@ -1006,17 +1028,17 @@ print_wan_ip() {
                 else
                     print $2,ifa,system("curl -s --connect-timeout 10 --interface "ifa"'" ${PIPDN}"'"" 2> /dev/null | grep -Eo \"""'"${regex_v4%"([\/]("*}"'""\"");
             }' \
-            | awk 'NF >= "2" {
+            | awk 'NF >= 2 {
                 if ($3 !~ "'"^${regex_v4%"([\/]("*}$"'")
-                    print $1,$2,system("wget -T 10 --bind-address="$2"'" -qO - ${PIPDN}"'"" 2> /dev/null | grep -Eo \"""'"${regex_v4%"([\/]("*}"'""\"");
+                    print $1,$2,system("wget -T 10 --bind-address="$2"'" -qO - ${siteIP}"'"" 2> /dev/null | grep -Eo \"""'"${regex_v4%"([\/]("*}"'""\"");
                 else
                     print $0;
             }' \
-            | awk 'NF >= "2" {
+            | awk 'NF >= 2 {
                 print "echo "$1" "$2" \"\$( get_isp_name \""$3"\" )\" "$3;
             }' )" \
-            | awk 'NF >= "2" {
-                wanip="Public IP Fetch Failed.";
+            | awk 'NF >= 2 {
+                wanip="Public IP Unobtainable.";
                 isp="";
                 if ($4 ~ "'"^${regex_v4%"([\/]("*}$"'") {wanip=$4; isp=$3;}
                 strbuf=sprintf("%s   %-8s %-12s  %-12s  %s","'"[$$]:"'","'"${ifx}"'",$2,wanip,isp);
@@ -1026,13 +1048,13 @@ print_wan_ip() {
     done
     lined="0"
     local strbuf="" count="0"
-    ifn="$( ip -6 route show 2> /dev/null | awk '/default/ {print $7}' | awk 'NF == "1" && !i[$1]++ {print $1}' )"
+    ifn="$( ip -6 route show 2> /dev/null | awk '/default/ {print $7}' | awk 'NF == 1 && !i[$1]++ {print $1}' )"
     for ifn in ${ifn}
     do
         ifx="$( get_wan_if_v6 "$( get_wan_dev "${ifn#*pppoe-}" )" )"
         echo "${ifn}" | grep -q '^pppoe-' && ifx="${ifx} pppoe"
         item="$( ip -6 -o address show dev "${ifn}" 2> /dev/null \
-            | awk 'NF != "0" {
+            | awk 'NF != 0 {
                 ifa=$4;
                 gsub(/\/.*$/, "", ifa);
                 print ifa;
