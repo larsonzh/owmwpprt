@@ -1,5 +1,5 @@
 #!/bin/sh
-# lzrules.sh v2.0.9
+# lzrules.sh v2.1.0
 # By LZ 妙妙呜 (larsonzhang@gmail.com)
 
 # LZ RULES script for OpenWrt based router
@@ -288,7 +288,7 @@ CUSTOM_V6_IPSETS_LST=""
 DNAME_IPSETS_LST=""
 
 # 版本号
-LZ_VERSION=v2.0.9
+LZ_VERSION=v2.1.0
 
 # 项目标识
 PROJECT_ID="lzrules"
@@ -557,6 +557,17 @@ get_wan_name_v6() {
     index="$(( index + 1 ))"
     [ -n "${WAN_V6_DEV_LIST}" ] && wan="$( echo "${WAN_V6_DEV_LIST}" | awk 'NR == ("'"${index}"'" + 0) {print $1}' )"
     echo "${wan}"
+}
+
+get_ipv4_sub_rt_id() {
+    local retVal="" tableID="1"
+    until [ "${tableID}" -gt "$(( WAN_AVAL_NUM + WAN_V6_AVAL_NUM ))" ]
+    do
+        retVal="$( ip -4 route show table "${tableID}" 2> /dev/null | awk '/default/ && $5 == "'"${1}"'" {print "'"${tableID}"'"; exit}' )"
+        [ -n "${retVal}" ] && break
+        tableID="$(( tableID + 1 ))"
+    done
+    echo "${retVal}"
 }
 
 add_custom_rule() {
@@ -1004,7 +1015,7 @@ get_isp_name_v6() {
 }
 
 print_wan_ip() {
-    local siteIP="${PIPDNX_ADDR}"
+    local siteIP="${PIPDNX_ADDR}" tableID=""
     eval "$( nslookup "${PIPDNX}" "${PDNXS}" 2> /dev/null \
         | awk -v x=0 'NR > 4 && $2 ~ "'"^${regex_v4%"([\/]("*}$"'" {
         print "siteIP=\""$2"\"";
@@ -1018,6 +1029,7 @@ print_wan_ip() {
             echo "$(lzdate) ${MY_LINE}"
             logger -p 1 "${MY_LINE}"
         }
+        tableID="$( get_ipv4_sub_rt_id "${ifn}" )"
         ifx="$( get_wan_if "${ifn}" )"
         eval "$( ip -4 -o address show dev "${ifn}" 2> /dev/null \
             | awk 'NF != 0 {
@@ -1029,9 +1041,14 @@ print_wan_ip() {
                     print $2,ifa,system("curl -s --connect-timeout 10 --interface "ifa"'" ${PIPDN}"'"" 2> /dev/null | grep -Eo \"""'"${regex_v4%"([\/]("*}"'""\"");
             }' \
             | awk 'NF >= 2 {
-                if ($3 !~ "'"^${regex_v4%"([\/]("*}$"'")
-                    print $1,$2,system("wget -T 10 --bind-address="$2"'" -qO - ${siteIP}"'"" 2> /dev/null | grep -Eo \"""'"${regex_v4%"([\/]("*}"'""\"");
-                else
+                if ($3 !~ "'"^${regex_v4%"([\/]("*}$"'") {
+                    if ("'"${tableID}"'" != "") {
+                        system("ip rule add from 0.0.0.0 to ""'"${siteIP}"'"" table ""'"${tableID}"'"" prio ""'"${CUSTOM_PRIO}"'"" > /dev/null 2>&1; ip route flush cache > /dev/null 2>&1");
+                        print $1,$2,system("wget -T 10 ""'" -qO - ${siteIP}"'"" 2> /dev/null | grep -Eo \"""'"${regex_v4%"([\/]("*}"'""\"");
+                        system("ip rule del from 0.0.0.0 to ""'"${siteIP}"'"" table ""'"${tableID}"'"" prio ""'"${CUSTOM_PRIO}"'"" > /dev/null 2>&1; ip route flush cache > /dev/null 2>&1");
+                    } else
+                        print $1,$2,system("wget -T 10 --bind-address="$2"'" -qO - ${siteIP}"'"" 2> /dev/null | grep -Eo \"""'"${regex_v4%"([\/]("*}"'""\"");
+                } else
                     print $0;
             }' \
             | awk 'NF >= 2 {
