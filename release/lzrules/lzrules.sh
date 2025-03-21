@@ -414,6 +414,19 @@ check_suport_evn() {
             logger -p 1 "[$$]: Package dnsmasq-full is not installed or corrupt."
             retval="1"
         fi
+        if awk -F "\'" '$1 == "DISTRIB_RELEASE=" {print $2}' "/etc/openwrt_release" 2> /dev/null | grep -qE '^22[\.][0]*3[\.]' \
+            || awk -F "\"" '$1 == ""VERSION=" {print $2}' "/etc/os-release" 2> /dev/null | grep -qE '^22[\.][0]*3[\.]'; then
+            if [ -z "$( opkg list-installed "iptables-nft" 2> /dev/null )" ] || ! which iptables-nft > /dev/null 2>&1; then
+                echo "$(lzdate)" [$$]: Package iptables-nft is not installed or corrupt.
+                logger -p 1 "[$$]: Package iptables-nft is not installed or corrupt."
+                retval="1"
+            fi
+            if [ -z "$( opkg list-installed "ip6tables-nft" 2> /dev/null )" ] || ! which ip6tables-nft > /dev/null 2>&1; then
+                echo "$(lzdate)" [$$]: Package ip6tables-nft is not installed or corrupt.
+                logger -p 1 "[$$]: Package ip6tables-nft is not installed or corrupt."
+                retval="1"
+            fi
+        fi
         break
     done
     if [ "${retval}" != "0" ]; then
