@@ -19,7 +19,6 @@
 #    iptables-nft
 #    ip6tables-nft
 #    wget-ssl
-#    curl
 #    dnsmasq-full
 #   注：dnsmasq-full安装前需卸载删除原有的dnsmasq软件包。
 # 2.脚本中的WAN口对应实际的物理接口，每个WAN口根据用户在network文件中接口设置，可能包含IPv4和IPv6协议的两个
@@ -335,12 +334,6 @@ PIPDN="whatismyip.akamai.com"
 # 公网出口IPv4地址查询备用网站域名
 PIPDNX="checkip.amazonaws.com"
 
-# 公网出口IPv4地址查询备用网站静态IP地址
-PIPDNX_ADDR="18.139.52.174"
-
-# 公网出口IPv4地址查询备用网站域名DNS服务器
-PDNXS="8.8.8.8"
-
 # 用户自定义IPv4网址/网段数据集合列表文件名
 CUSTOM_IPSETS_LST_FILENAME="${PATH_DATA}/custom_ipsets_lst.txt"
 
@@ -406,11 +399,6 @@ check_suport_evn() {
             logger -p 1 "[$$]: Package luci-app-mwan3 is not installed or corrupt."
             retval="1"
         fi
-        if [ -z "$( opkg list-installed "curl" 2> /dev/null )" ] || ! which curl > /dev/null 2>&1; then
-            echo "$(lzdate)" [$$]: Package curl is not installed or corrupt.
-            logger -p 1 "[$$]: Package curl is not installed or corrupt."
-            retval="1"
-        fi
         if [ -z "$( opkg list-installed "wget-ssl" 2> /dev/null )" ] || ! which wget > /dev/null 2>&1; then
             echo "$(lzdate)" [$$]: Package wget-ssl is not installed or corrupt.
             logger -p 1 "[$$]: Package wget-ssl is not installed or corrupt."
@@ -421,7 +409,7 @@ check_suport_evn() {
             logger -p 1 "[$$]: Package ipset is not installed."
             retval="1"
         fi
-        if [ -z "$( opkg list-installed "dnsmasq-full" 2> /dev/null )" ] || ! which wget > /dev/null 2>&1; then
+        if [ -z "$( opkg list-installed "dnsmasq-full" 2> /dev/null )" ] || ! which dnsmasq > /dev/null 2>&1; then
             echo "$(lzdate)" [$$]: Package dnsmasq-full is not installed or corrupt.
             logger -p 1 "[$$]: Package dnsmasq-full is not installed or corrupt."
             retval="1"
@@ -461,8 +449,6 @@ cleaning_user_data() {
     ! echo "${CUSTOM_IPSETS}" | grep -q '^[0-1]$' && CUSTOM_IPSETS=1
     ! echo "${CUSTOM_V6_IPSETS}" | grep -q '^[0-1]$' && CUSTOM_V6_IPSETS=1
     ! echo "${DNAME_IPSETS}" | grep -q '^[0-1]$' && DNAME_IPSETS=1
-    ! echo "${PIPDNX_ADDR}" | grep -qE "^${regex_v4%"([\/]("*}$" && PIPDNX_ADDR="18.139.52.174"
-    ! echo "${PDNXS}" | grep -qE "^${regex_v4%"([\/]("*}$" && PDNXS="8.8.8.8"
 }
 
 get_wan_dev_if() {
@@ -580,12 +566,8 @@ add_custom_rule() {
             eval "$( ip -4 -o address show dev "${ifn}" 2> /dev/null | awk 'NF != 0 && $4 ~ "'"^${regex_v4}$"'" {
                 ifa=$4;
                 gsub(/\/.*$/, "", ifa);
-                print "ip rule add from "ifa" table ""'"${tableID}"'"" prio ""'"${CUSTOM_PRIO}"'"" > /dev/null 2>&1";
+                print "ip rule add from "ifa" table ""'"${tableID}"'"" prio ""'"${CUSTOM_PRIO}"'"" > /dev/null 2>&1; count=\"$(( count + 1 ))\";";
             }' )"
-            if [ "${count}" = "0" ]; then
-                ip rule add from 0.0.0.0 to "${PDNXS}" table "${tableID}" prio "${CUSTOM_PRIO}" > /dev/null 2>&1
-                count="$(( count + 1 ))"
-            fi
         done
         tableID="$(( tableID + 1 ))"
     done
@@ -597,14 +579,10 @@ add_custom_rule() {
         for ifn in ${ifn}
         do
             eval "$( ip -6 -o address show dev "${ifn}" 2> /dev/null \
-                | awk -v count="0" 'NF != 0 && $4 ~ "'"^${regex_v6}$"'" && $4 !~ /^[fF][eE][89abAB][0-9a-fA-F]:/ {
+                | awk 'NF != 0 && $4 ~ "'"^${regex_v6}$"'" && $4 !~ /^[fF][eE][89abAB][0-9a-fA-F]:/ {
                 ifa=$4;
                 gsub(/\/.*$/, "", ifa);
-                print "ip -6 rule add from "ifa" table ""'"${tableID}"'"" prio ""'"${CUSTOM_PRIO}"'"" > /dev/null 2>&1";
-                count++;
-            } END{
-                if (count != "0")
-                    print "count=\"$(( count + 1 ))\"";
+                print "ip -6 rule add from "ifa" table ""'"${tableID}"'"" prio ""'"${CUSTOM_PRIO}"'"" > /dev/null 2>&1; count=\"$(( count + 1 ))\";";
             }' )"
         done
         tableID="$(( tableID + 1 ))"
@@ -651,11 +629,6 @@ delete_custom_rule() {
     eval "$( ip rule show | awk -v count="0" '$1 == "'"${CUSTOM_PRIO}:"'" \
         && $2 == "from" && $3 ~ "'"^${regex_v4%"([\/]("*}$"'" && $4 == "lookup" && NF == 5 {
         print "ip rule del "$2" "$3" table "$5" prio ""'"${CUSTOM_PRIO}"'"" > /dev/null 2>&1";
-        count++;
-        next;
-    } $1 == "'"${CUSTOM_PRIO}:"'" && $2 == "from" && $3 == "0.0.0.0" && $4 == "to" && $5 ~ "'"^${regex_v4%"([\/]("*}$"'" \
-        && $6 == "lookup" && NF == 7 {
-        print "ip rule del "$2" "$3" to "$5" table "$7" prio ""'"${CUSTOM_PRIO}"'"" > /dev/null 2>&1";
         count++;
     } END{
         if (count != "0")
@@ -1015,12 +988,7 @@ get_isp_name_v6() {
 }
 
 print_wan_ip() {
-    local siteIP="${PIPDNX_ADDR}" tableID=""
-    eval "$( nslookup "${PIPDNX}" "${PDNXS}" 2> /dev/null \
-        | awk -v x=0 'NR > 4 && $2 ~ "'"^${regex_v4%"([\/]("*}$"'" {
-        print "siteIP=\""$2"\"";
-        exit;
-    }' )"
+    local tableID=""
     local ifn="$( ip route show 2> /dev/null | awk '/default/ {print $5}' | awk 'NF == 1 && !i[$1]++ {print $1}' )" ifx="" item="" lined="0"
     for ifn in ${ifn}
     do
@@ -1030,30 +998,30 @@ print_wan_ip() {
             logger -p 1 "${MY_LINE}"
         }
         tableID="$( get_ipv4_sub_rt_id "${ifn}" )"
+        ip rule add from 0.0.0.0 table "${tableID}" prio "${CUSTOM_PRIO}" > /dev/null 2>&1
+        ip route flush cache > /dev/null 2>&1
         ifx="$( get_wan_if "${ifn}" )"
         eval "$( ip -4 -o address show dev "${ifn}" 2> /dev/null \
             | awk 'NF != 0 {
                 ifa=$4;
                 gsub(/\/.*$/, "", ifa);
-                if ($2 ~ /^pppoe-/)
-                    print $2,ifa,system("curl -s --connect-timeout 10 --interface "$2"'" ${PIPDN}"'"" 2> /dev/null | grep -Eo \"""'"${regex_v4%"([\/]("*}"'""\"");
-                else
-                    print $2,ifa,system("curl -s --connect-timeout 10 --interface "ifa"'" ${PIPDN}"'"" 2> /dev/null | grep -Eo \"""'"${regex_v4%"([\/]("*}"'""\"");
+                if ("'"${tableID}"'" != "") {
+                    print $2,ifa,system("wget -T 10 ""'" -qO - ${PIPDN}"'"" 2> /dev/null | grep -Eo \"""'"${regex_v4%"([\/]("*}"'""\" | sed -n 1p");
+                } else
+                    print $2,ifa,system("wget -T 10 --bind-address="ifa"'" -qO - ${PIPDN}"'"" 2> /dev/null | grep -Eo \"""'"${regex_v4%"([\/]("*}"'""\" | sed -n 1p");
             }' \
             | awk 'NF >= 2 {
                 if ($3 !~ "'"^${regex_v4%"([\/]("*}$"'") {
                     if ("'"${tableID}"'" != "") {
-                        system("ip rule add from 0.0.0.0 to ""'"${siteIP}"'"" table ""'"${tableID}"'"" prio ""'"${CUSTOM_PRIO}"'"" > /dev/null 2>&1; ip route flush cache > /dev/null 2>&1");
-                        print $1,$2,system("wget -T 10 ""'" -qO - ${siteIP}"'"" 2> /dev/null | grep -Eo \"""'"${regex_v4%"([\/]("*}"'""\"");
-                        system("ip rule del from 0.0.0.0 to ""'"${siteIP}"'"" table ""'"${tableID}"'"" prio ""'"${CUSTOM_PRIO}"'"" > /dev/null 2>&1; ip route flush cache > /dev/null 2>&1");
+                        print $1,$2,system("wget -T 10 ""'" -qO - ${PIPDNX}"'"" 2> /dev/null | grep -Eo \"""'"${regex_v4%"([\/]("*}"'""\" | sed -n 1p");
                     } else
-                        print $1,$2,system("wget -T 10 --bind-address="$2"'" -qO - ${siteIP}"'"" 2> /dev/null | grep -Eo \"""'"${regex_v4%"([\/]("*}"'""\"");
+                        print $1,$2,system("wget -T 10 --bind-address="$2"'" -qO - ${PIPDNX}"'"" 2> /dev/null | grep -Eo \"""'"${regex_v4%"([\/]("*}"'""\" | sed -n 1p");
                 } else
                     print $0;
             }' \
             | awk 'NF >= 2 {
                 print "echo "$1" "$2" \"\$( get_isp_name \""$3"\" )\" "$3;
-            }' )" \
+        }' )" \
             | awk 'NF >= 2 {
                 wanip="Public IP Unobtainable.";
                 isp="";
@@ -1061,7 +1029,9 @@ print_wan_ip() {
                 strbuf=sprintf("%s   %-8s %-12s  %-12s  %s","'"[$$]:"'","'"${ifx}"'",$2,wanip,isp);
                 printf("%s %s\n","'"$(lzdate)"'",strbuf);
                 system("logger -p 1 \""strbuf"\"");
-            }'
+        }'
+        ip rule del from 0.0.0.0 table "${tableID}" prio "${CUSTOM_PRIO}" > /dev/null 2>&1
+        ip route flush cache > /dev/null 2>&1
     done
     lined="0"
     local strbuf="" count="0"
@@ -1191,7 +1161,7 @@ update_isp_data() {
     while [ "${retry_count}" -le "${retry_limit}" ]
     do
         [ ! -f "${PATH_DATA}/cookies.isp" ] && COOKIES_STR="--save-cookies=${PATH_DATA}/cookies.isp" || COOKIES_STR="--load-cookies=${PATH_DATA}/cookies.isp"
-        eval "wget -q -nc -c --timeout=20 --random-wait --user-agent=\"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.5304.88 Safari/537.36 Edg/108.0.1462.46\" --referer=${UPDATE_ISPIP_DATA_DOWNLOAD_URL} ${COOKIES_STR} --keep-session-cookies --no-check-certificate -P ${PATH_TMP_DATA} -i ${PATH_TMP_DATA}/${ISPIP_FILE_URL_LIST}"
+        eval "wget -q -nc -c --timeout=20 --random-wait --user-agent=\"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.5304.88 Safari/537.36 Edg/108.0.1462.46\" --referer=${UPDATE_ISPIP_DATA_DOWNLOAD_URL} ${COOKIES_STR} --keep-session-cookies --no-check-certificate -P ${PATH_TMP_DATA} -i ${PATH_TMP_DATA}/${ISPIP_FILE_URL_LIST} 2> /dev/null"
         if [ "$( find "${PATH_TMP_DATA}" -name "*_cidr.txt" -print0 2> /dev/null | awk '{} END{print NR}' )" -ge "${ISP_TOTAL}" ] \
             && [ "$( find "${PATH_TMP_DATA}" -name "*_ipv6.txt" -print0 2> /dev/null | awk '{} END{print NR}' )" -ge "${ISP_TOTAL}" ]; then
             retval="0"
