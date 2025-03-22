@@ -1,33 +1,33 @@
 #!/bin/sh
-# lzrules.sh v2.1.0
+# lzrules.sh v2.1.1
 # By LZ 妙妙呜 (larsonzhang@gmail.com)
 
 # LZ RULES script for OpenWrt based router
 
-# 脚本命令 (假设当前在lzrules目录)
+# 脚本命令 (假设当前在 lzrules 目录)
 # 加载规则数据         ./lzrules.sh
 # 更新数据文件         ./lzrules.sh update
 # 卸载运行数据         ./lzrules.sh unload
 
-# OpenWrt多WAN口策略路由分流脚本
+# OpenWrt 多 WAN 口策略路由分流脚本
 
 # 使用说明：
-# 1.脚本作为mwan3的配套软件使用，请提前到OpenWrt中的“Software”界面内搜索并下载安装如下软件包：
-#    mwan3
-#    luci-app-mwan3
-#    luci-i18n-mwan3-zh-cn
-#    iptables-nft
-#    ip6tables-nft
-#    wget-ssl
-#    dnsmasq-full
-#   注：dnsmasq-full安装前需卸载删除原有的dnsmasq软件包。
-# 2.脚本中的WAN口对应实际的物理接口，每个WAN口根据用户在network文件中接口设置，可能包含IPv4和IPv6协议的两个
-#   虚拟接口，按照OpenWrt“网络-MultiWAN管理器-接口”配置界面里的IPv4/6协议接口设定顺序排列。
-# 3.脚本已涵盖中国地区所有运营商IPv4/IPv6目标网段，访问国外的流量出口在“MultiWAN管理器”中配置出口策略规则。
-# 4.在脚本中配置完流量出口后，需在“MultiWAN管理器-规则”界面内，将WAN口数据集合名称（如：ISPIP_SET_0），填
-#   入相应WAN口策略规则条目中的“IP配置”字段内。填写时，在下拉框中选择“自定义”，在输入框中书写完毕后按回车键，
-#   即可完成数据集合名称的输入。卸载脚本时，请在下拉框中选择“--请选择--”项，然后按页面中的“保存”，最后在“规
-#   则”界面中“保存并应用”，就可以解除该WAN口数据集合与相应规则的绑定关系。
+# 1. 脚本作为 mwan3 的配套软件使用，请提前到 OpenWrt 中的「Software」界面内搜索并下载安装如下软件包：
+#     mwan3
+#     luci-app-mwan3
+#     luci-i18n-mwan3-zh-cn
+#     iptables-nft
+#     ip6tables-nft
+#     wget-ssl
+#     dnsmasq-full
+#    注：dnsmasq-full 安装前需卸载删除原有的 dnsmasq 软件包。
+# 2. 脚本中的 WAN 口对应实际的物理网卡接口，每个 WAN 口根据用户在 network 文件中接口设置，可能包含 IPv4 和 IPv6 
+#    协议的两个虚拟接口，按照 OpenWrt「网络 - MultiWAN 管理器 - 接口」配置界面里的 IPv4/6 协议接口设定顺序排列。
+# 3. 脚本已涵盖中国地区所有运营商 IPv4/IPv6 目标网段，访问国外的流量出口在「MultiWAN 管理器」中配置出口策略规则。
+# 4. 在脚本中配置完流量出口后，需在「MultiWAN 管理器 - 规则」界面内，将 WAN 口数据集合名称（如：ISPIP_SET_0），填
+#    入相应 WAN 口策略规则条目中的「IP 配置」字段内。填写时，在下拉框中选择「自定义」，在输入框中书写完毕后按回车键，
+#    即可完成数据集合名称的输入。卸载脚本时，请在下拉框中选择「--请选择--」项，然后按页面中的「保存」，最后在「规
+#    则」界面中「保存并应用」，就可以解除该 WAN 口数据集合与相应规则的绑定关系。
 
 # BEGIN
 
@@ -36,89 +36,89 @@
 
 # ----------------用户运行策略自定义区----------------
 
-# 中国电信IPv4/IPv6目标网段流量出口（网段数据文件：chinatelecom_cidr.txt/chinatelecom_ipv6.txt）
-# 0--第一WAN口；1--第二WAN口；···；7--第八WAN口；8--负载均衡；9--禁用；取值范围：0~9
-# 缺省：IPv4流量出口--第一WAN口（0）；IPv6流量出口--禁用（9）。
+# 中国电信 IPv4/IPv6 目标网段流量（网段数据文件：chinatelecom_cidr.txt/chinatelecom_ipv6.txt）
+# 0 -- 第一 WAN 口；1 -- 第二 WAN 口；···；7 -- 第八 WAN 口；8 -- 负载均衡；9 -- 未知流量（mwan3 中设置处理）；取值范围：0 ~ 9
+# 缺省：IPv4 流量 -- 第一 WAN 口（0）；IPv6 流量 -- 未知流量（9）。
 ISP_0_WAN_PORT=0
 ISP_0_WAN_PORT_V6=9
 
-# 中国联通/网通IPv4/IPv6目标网段流量出口（网段数据文件：unicom_cnc_cidr.txt/unicom_cnc_ipv6.txt）
-# 0--第一WAN口；1--第二WAN口；···；7--第八WAN口；8--负载均衡；9--禁用；取值范围：0~9
-# 缺省：IPv4流量出口--第一WAN口（0）；IPv6流量出口--禁用（9）。
+# 中国联通/网通 IPv4/IPv6 目标网段流量（网段数据文件：unicom_cnc_cidr.txt/unicom_cnc_ipv6.txt）
+# 0 -- 第一 WAN 口；1 -- 第二 WAN 口；···；7 -- 第八 WAN 口；8 -- 负载均衡；9 -- 未知流量（mwan3 中设置处理）；取值范围：0 ~ 9
+# 缺省：IPv4 流量 -- 第一 WAN 口（0）；IPv6 流量 -- 未知流量（9）。
 ISP_1_WAN_PORT=0
 ISP_1_WAN_PORT_V6=9
 
-# 中国移动IPv4/IPv6目标网段流量出口（网段数据文件：cmcc_cidr.txt/cmcc_ipv6.txt）
-# 0--第一WAN口；1--第二WAN口；···；7--第八WAN口；8--负载均衡；9--禁用；取值范围：0~9
-# 缺省：IPv4流量出口--第二WAN口（1）；IPv6流量出口--禁用（9）。
+# 中国移动 IPv4/IPv6 目标网段流量（网段数据文件：cmcc_cidr.txt/cmcc_ipv6.txt）
+# 0 -- 第一 WAN 口；1 -- 第二 WAN 口；···；7 -- 第八 WAN 口；8 -- 负载均衡；9 -- 未知流量（mwan3 中设置处理）；取值范围：0 ~ 9
+# 缺省：IPv4 流量 -- 第二 WAN 口（1）；IPv6 流量 -- 未知流量（9）。
 ISP_2_WAN_PORT=1
 ISP_2_WAN_PORT_V6=9
 
-# 中国铁通IPv4/IPv6目标网段流量出口（网段数据文件：crtc_cidr.txt/crtc_ipv6.txt）
-# 0--第一WAN口；1--第二WAN口；···；7--第八WAN口；8--负载均衡；9--禁用；取值范围：0~9
-# 缺省：IPv4流量出口--第二WAN口（1）；IPv6流量出口--禁用（9）。
+# 中国铁通 IPv4/IPv6 目标网段流量（网段数据文件：crtc_cidr.txt/crtc_ipv6.txt）
+# 0 -- 第一 WAN 口；1 -- 第二 WAN 口；···；7 -- 第八 WAN 口；8 -- 负载均衡；9 -- 未知流量（mwan3 中设置处理）；取值范围：0 ~ 9
+# 缺省：IPv4 流量 -- 第二 WAN 口（1）；IPv6 流量 -- 未知流量（9）。
 ISP_3_WAN_PORT=1
 ISP_3_WAN_PORT_V6=9
 
-# 中国教育网IPv4/IPv6目标网段流量出口（网段数据文件：cernet_cidr.txt/cernet_ipv6.txt）
-# 0--第一WAN口；1--第二WAN口；···；7--第八WAN口；8--负载均衡；9--禁用；取值范围：0~9
-# 缺省：IPv4流量出口--第二WAN口（1）；IPv6流量出口--禁用（9）。
+# 中国教育网 IPv4/IPv6 目标网段流量（网段数据文件：cernet_cidr.txt/cernet_ipv6.txt）
+# 0 -- 第一 WAN 口；1 -- 第二 WAN 口；···；7 -- 第八 WAN 口；8 -- 负载均衡；9 -- 未知流量（mwan3 中设置处理）；取值范围：0 ~ 9
+# 缺省：IPv4 流量 -- 第二 WAN 口（1）；IPv6 流量 -- 未知流量（9）。
 ISP_4_WAN_PORT=1
 ISP_4_WAN_PORT_V6=9
 
-# 长城宽带/鹏博士IPv4/IPv6目标网段流量出口（网段数据文件：gwbn_cidr.txt/gwbn_ipv6.txt）
-# 0--第一WAN口；1--第二WAN口；···；7--第八WAN口；8--负载均衡；9--禁用；取值范围：0~9
-# 缺省：IPv4流量出口--第二WAN口（1）；IPv6流量出口--禁用（9）。
+# 长城宽带/鹏博士 IPv4/IPv6 目标网段流量（网段数据文件：gwbn_cidr.txt/gwbn_ipv6.txt）
+# 0 -- 第一 WAN 口；1 -- 第二 WAN 口；···；7 -- 第八 WAN 口；8 -- 负载均衡；9 -- 未知流量（mwan3 中设置处理）；取值范围：0 ~ 9
+# 缺省：IPv4 流量 -- 第二 WAN 口（1）；IPv6 流量 -- 未知流量（9）。
 ISP_5_WAN_PORT=1
 ISP_5_WAN_PORT_V6=9
 
-# 中国大陆其他运营商IPv4/IPv6目标网段流量出口（网段数据文件：othernet_cidr.txt/othernet_ipv6.txt）
-# 0--第一WAN口；1--第二WAN口；···；7--第八WAN口；8--负载均衡；9--禁用；取值范围：0~9
-# 缺省：IPv4流量出口--第一WAN口（0）；IPv6流量出口--禁用（9）。
+# 中国大陆其他运营商 IPv4/IPv6 目标网段流量（网段数据文件：othernet_cidr.txt/othernet_ipv6.txt）
+# 0 -- 第一 WAN 口；1 -- 第二 WAN 口；···；7 -- 第八 WAN 口；8 -- 负载均衡；9 -- 未知流量（mwan3 中设置处理）；取值范围：0 ~ 9
+# 缺省：IPv4 流量 -- 第二 WAN 口（0）；IPv6 流量 -- 未知流量（9）。
 ISP_6_WAN_PORT=0
 ISP_6_WAN_PORT_V6=9
 
-# 香港地区运营商IPv4/IPv6目标网段流量出口（网段数据文件：hk_cidr.txt/hk_ipv6.txt）
-# 0--第一WAN口；1--第二WAN口；···；7--第八WAN口；8--负载均衡；9--禁用；取值范围：0~9
-# 缺省：IPv4流量出口--第一WAN口（0）；IPv6流量出口--禁用（9）。
+# 香港地区运营商 IPv4/IPv6 目标网段流量（网段数据文件：hk_cidr.txt/hk_ipv6.txt）
+# 0 -- 第一 WAN 口；1 -- 第二 WAN 口；···；7 -- 第八 WAN 口；8 -- 负载均衡；9 -- 未知流量（mwan3 中设置处理）；取值范围：0 ~ 9
+# 缺省：IPv4 流量 -- 第二 WAN 口（0）；IPv6 流量 -- 未知流量（9）。
 ISP_7_WAN_PORT=0
 ISP_7_WAN_PORT_V6=9
 
-# 澳门地区运营商IPv4/IPv6目标网段流量出口（网段数据文件：mo_cidr.txt/mo_ipv6.txt）
-# 0--第一WAN口；1--第二WAN口；···；7--第八WAN口；8--负载均衡；9--禁用；取值范围：0~9
-# 缺省：IPv4流量出口--第一WAN口（0）；IPv6流量出口--禁用（9）。
+# 澳门地区运营商 IPv4/IPv6 目标网段流量（网段数据文件：mo_cidr.txt/mo_ipv6.txt）
+# 0 -- 第一 WAN 口；1 -- 第二 WAN 口；···；7 -- 第八 WAN 口；8 -- 负载均衡；9 -- 未知流量（mwan3 中设置处理）；取值范围：0 ~ 9
+# 缺省：IPv4 流量 -- 第二 WAN 口（0）；IPv6 流量 -- 未知流量（9）。
 ISP_8_WAN_PORT=0
 ISP_8_WAN_PORT_V6=9
 
-# 台湾地区运营商IPv4/IPv6目标网段流量出口（网段数据文件：tw_cidr.txt/tw_ipv6.txt）
-# 0--第一WAN口；1--第二WAN口；···；7--第八WAN口；8--负载均衡；9--禁用；取值范围：0~9
-# 缺省：IPv4流量出口--第一WAN口（0）；IPv6流量出口--禁用（9）。
+# 台湾地区运营商 IPv4/IPv6 目标网段流量（网段数据文件：tw_cidr.txt/tw_ipv6.txt）
+# 0 -- 第一 WAN 口；1 -- 第二 WAN 口；···；7 -- 第八 WAN 口；8 -- 负载均衡；9 -- 未知流量（mwan3 中设置处理）；取值范围：0 ~ 9
+# 缺省：IPv4 流量 -- 第二 WAN 口（0）；IPv6 流量 -- 未知流量（9）。
 ISP_9_WAN_PORT=0
 ISP_9_WAN_PORT_V6=9
 
-# 定时更新ISP网络运营商CIDR网段数据时间参数定义
-# 建议在当天1:30后执行定时更新。
-# 缺省为每隔3天，小时数和分钟数由系统指定。
-INTERVAL_DAY=3  # 间隔天数（1~31）：取值"3"表示每隔3天；取值"0"表示禁用定时更新。
-TIMER_HOUR=x    # 时间小时数（0~23，x表示由系统指定）；取值"3"表示更新当天的凌晨3点。
-TIMER_MIN=x     # 时间分钟数（0~59，x表示由系统指定）；取值"18"表示更新当天的凌晨3点18分。
+# 定时更新 ISP 网络运营商 CIDR 网段数据时间参数定义
+# 建议在当天 1:30 后执行定时更新。
+# 缺省为每隔 3 天，小时数和分钟数由系统指定。
+INTERVAL_DAY=3  # 间隔天数（1 ~ 31）：取值 3 表示每隔 3 天；取值 0 表示停用定时更新。
+TIMER_HOUR=x    # 时间小时数（0 ~ 23，x 表示由系统指定）；取值 3 表示更新当天的凌晨 3 点。
+TIMER_MIN=x     # 时间分钟数（0 ~ 59，x 表示由系统指定）；取值 18 表示更新当天的凌晨 3 点 18 分。
 # 网段数据变更不很频繁，更新间隔时间不要太密集，有助于降低远程下载服务器的负荷压力。
 # 脚本运行期间，修改定时设置、路由器重启，或手工停止脚本运行后再次重启，会导致定时更新时间重新开始计数。
 
-# 定时更新ISP网络运营商CIDR网段数据失败后自动重试次数
-# 0--不重试；>0--重试次数；取值范围：0~99
-# 缺省为重试5次。
+# 定时更新 ISP 网络运营商CIDR网段数据失败后自动重试次数
+# 0 -- 不重试；> 0 -- 重试次数；取值范围：0 ~ 99
+# 缺省为重试 5 次。
 RETRY_NUM=5
-# 若自动重试后经常下载失败，建议自行前往 https://ispip.clang.cn/ 网站手工下载获取与上述10个网络运营商网
-# 段数据文件同名的最新CIDR网段数据，下载后直接粘贴覆盖 /etc/lzrules/data/ 目录内同名数据文件，重启脚本即
+# 若自动重试后经常下载失败，建议自行前往 https://ispip.clang.cn/ 网站手工下载获取与上述 10 个网络运营商网
+# 段数据文件同名的最新 CIDR 网段数据，下载后直接粘贴覆盖 /etc/lzrules/data/ 目录内同名数据文件，重启脚本即
 # 刻生效。
 
-# 完成出口设定后，需将WAN口的网段数据集合名称（例如：ISPIP_SET_0）填入“MultiWAN管理器”内相应WAN口策略规
-# 则条目中的“IP配置”字段内，形成绑定关系，即可最终通过OpenWrt内的mwan3软件完成多WAN口流量的策略路由。脚本
-# 的主要作用就是为mwan3生成可供其多个WAN口通道选择使用的目标流量网段数据集合，从而实现更复杂的业务策略。
+# 完成出口设定后，需将 WAN 口的网段数据集合名称（例如：ISPIP_SET_0）填入「MultiWAN 管理器」内相应 WAN 口策略规
+# 则条目中的「IP 配置」字段内，形成绑定关系，即可最终通过 OpenWrt 内的 mwan3 软件完成多 WAN 口流量的策略路由。脚本
+# 的主要作用就是为 mwan3 生成可供其多个 WAN 口通道选择使用的目标流量网段地址数据集合，从而实现更复杂的业务策略。
 
-# WAN口国内IPv4网段数据集合名称
-# 从上往下按mwan3设置中第一WAN口、第二WAN口至第八WAN口的顺序排列，每个WAN口一个，可最多对应八个物理WAN口的使用。
+# WAN 口国内 IPv4 网段数据集合名称
+# 从上往下按 mwan3 设置中第一 WAN 口、第二 WAN 口至第八 WAN 口的顺序排列，每个 WAN 口一个，可最多对应八个物理 WAN 口的使用。
 ISPIP_SET_0="ISPIP_SET_0"
 ISPIP_SET_1="ISPIP_SET_1"
 ISPIP_SET_2="ISPIP_SET_2"
@@ -128,8 +128,8 @@ ISPIP_SET_5="ISPIP_SET_5"
 ISPIP_SET_6="ISPIP_SET_6"
 ISPIP_SET_7="ISPIP_SET_7"
 
-# WAN口国内IPv6网段数据集合名称
-# 从上往下按mwan3设置中第一WAN口、第二WAN口至第八WAN口的顺序排列，每个WAN口一个，可最多对应八个物理WAN口的使用。
+# WAN 口国内 IPv6 网段数据集合名称
+# 从上往下按 mwan3 设置中第一 WAN 口、第二 WAN 口至第八 WAN 口的顺序排列，每个 WAN 口一个，可最多对应八个物理 WAN 口的使用。
 ISPIP_V6_SET_0="ISPIP_V6_SET_0"
 ISPIP_V6_SET_1="ISPIP_V6_SET_1"
 ISPIP_V6_SET_2="ISPIP_V6_SET_2"
@@ -139,85 +139,85 @@ ISPIP_V6_SET_5="ISPIP_V6_SET_5"
 ISPIP_V6_SET_6="ISPIP_V6_SET_6"
 ISPIP_V6_SET_7="ISPIP_V6_SET_7"
 
-# 多WAN口IPv4流量负载均衡数据集合名称
+# 多 WAN 口 IPv4 流量负载均衡数据集合名称
 ISPIP_SET_B="ISPIP_SET_B"
 
-# 多WAN口IPv6流量负载均衡数据集合名称
+# 多 WAN 口 IPv6 流量负载均衡数据集合名称
 ISPIP_V6_SET_B="ISPIP_V6_SET_B"
 
-# 用户自定义IPv4目标访问网址/网段数据集合列表文件（custom_ipsets_lst.txt）
-# 0--启用；1--禁用；取值范围：0~1
-# 缺省为禁用（1）。
+# 用户自定义 IPv4 目标访问网址/网段数据集合列表文件（custom_ipsets_lst.txt）
+# 0 -- 启用；1 -- 停用；取值范围：0 ~ 1
+# 缺省为停用（1）。
 CUSTOM_IPSETS=1
-# 该列表文件位于项目路径内的data目录内，文本文件，名称和路径不可更改。
-# 每一行可定义一个网址/网段数据集合，可定义多条，数量不限。数据集合可在mwan3的WAN口流量策略规则设置中使用。
+# 该列表文件位于项目路径内的 data 目录内，文本文件，名称和路径不可更改。
+# 每一行可定义一个网址/网段数据集合，可定义多条，数量不限。数据集合可在 mwan3 的 WAN 口流量策略规则设置中使用。
 # 格式：
-# 数据集合名称="全路径IPv4网址/网段数据文件名"
+# 数据集合名称="全路径 IPv4 网址/网段数据文件名"
 # 注意：
 # 数据集合名称在整个路由器系统中具有唯一性，不能重复，否则会创建失败或影响系统中的其他代码运行；等号前后不能
-# 有空格；输入字符为英文半角，且符合Linux变量名称、路径命名、文件命名的规则；全路径文件名要用英文半角双引号
+# 有空格；输入字符为英文半角，且符合 Linux 变量名称、路径命名、文件命名的规则；全路径文件名要用英文半角双引号
 # 括起来。
 # 例如：
-# MY_IPSET_0="/mypath/my_ip_address_list_0.txt" # 我的第一个网址/网段数据集合
+# MY_IPSET_0="/mypath/my_ip_address_list_0.txt" # 我的第一个 IPv4 网址/网段数据集合
 # MY_IPSET_1="/mypath/my_ip_address_list_1.txt"
-# 条目起始处加#符号，可忽略该条定义；在每条定义后面加空格，再添加#符号，后面可填写该条目的备注。
-# 网址/网段数据文件由用户自己编制和命名，内容格式可参考data目录内的运营是网段数据文件，每行为一个IPv4格式的
-# IP地址或CIDR网段，不能是域名形式的网址，可填写多个条目，数量不限。
-# 定义完数据集合列表文件和网址/网段数据文件后，需前往OpenWrt“网络-MultiWAN管理器-规则”界面内，为每个网址/
+# 条目起始处加 # 符号，可忽略该条定义；在每条定义后面加空格，再添加 # 符号，后面可填写该条目的备注。
+# 网址/网段数据文件由用户自己编制和命名，内容格式可参考 data 目录内的运营是网段数据文件，每行为一个 IPv4 格式的
+# IP 地址或 CIDR 网段，不能是域名形式的网址，可填写多个条目，数量不限。
+# 定义完数据集合列表文件和网址/网段数据文件后，需前往 OpenWrt「网络 - MultiWAN 管理器 - 规则」界面内，为每个网址/
 # 网段数据集合按规则优先级添加和设置单独的出口规则，实现所需的流量出口策略。
 
-# 用户自定义IPv6目标访问网址/网段数据集合列表文件（custom_ipv6_ipsets_lst.txt）
-# 0--启用；1--禁用；取值范围：0~1
-# 缺省为禁用（1）。
+# 用户自定义 IPv6 目标访问网址/网段数据集合列表文件（custom_ipv6_ipsets_lst.txt）
+# 0 -- 启用；1 -- 停用；取值范围：0 ~ 1
+# 缺省为停用（1）。
 CUSTOM_V6_IPSETS=1
-# 该列表文件位于项目路径内的data目录内，文本文件，名称和路径不可更改。
-# 每一行可定义一个网址/网段数据集合，可定义多条，数量不限。数据集合可在mwan3的WAN口流量策略规则设置中使用。
+# 该列表文件位于项目路径内的 data 目录内，文本文件，名称和路径不可更改。
+# 每一行可定义一个网址/网段数据集合，可定义多条，数量不限。数据集合可在 mwan3 的 WAN 口流量策略规则设置中使用。
 # 格式：
-# 数据集合名称="全路径IPv6网址/网段数据文件名"
+# 数据集合名称="全路径 IPv6 网址/网段数据文件名"
 # 注意：
 # 数据集合名称在整个路由器系统中具有唯一性，不能重复，否则会创建失败或影响系统中的其他代码运行；等号前后不能
-# 有空格；输入字符为英文半角，且符合Linux变量名称、路径命名、文件命名的规则；全路径文件名要用英文半角双引号
+# 有空格；输入字符为英文半角，且符合 Linux 变量名称、路径命名、文件命名的规则；全路径文件名要用英文半角双引号
 # 括起来。
 # 例如：
-# MY_V6_IPSET_0="/mypath/my_ipv6_address_list_0.txt" # 我的第一个IPv6网址/网段数据集合
+# MY_V6_IPSET_0="/mypath/my_ipv6_address_list_0.txt" # 我的第一个 IPv6 网址/网段数据集合
 # MY_V6_IPSET_1="/mypath/my_ipv6_address_list_1.txt"
-# 条目起始处加#符号，可忽略该条定义；在每条定义后面加空格，再添加#符号，后面可填写该条目的备注。
-# 网址/网段数据文件由用户自己编制和命名，内容格式可参考data目录内的运营是网段数据文件，每行为一个IPv6格式的
-# IP地址或网段，不能是域名形式的网址，可填写多个条目，数量不限。
-# 定义完数据集合列表文件和网址/网段数据文件后，需前往OpenWrt“网络-MultiWAN管理器-规则”界面内，为每个网址/
+# 条目起始处加 # 符号，可忽略该条定义；在每条定义后面加空格，再添加 # 符号，后面可填写该条目的备注。
+# 网址/网段数据文件由用户自己编制和命名，内容格式可参考 data 目录内的运营是网段数据文件，每行为一个 IPv6 格式的
+# IP 地址或网段，不能是域名形式的网址，可填写多个条目，数量不限。
+# 定义完数据集合列表文件和网址/网段数据文件后，需前往 OpenWrt「网络 - MultiWAN 管理器 - 规则」界面内，为每个网址/
 # 网段数据集合按规则优先级添加和设置单独的出口规则，实现所需的流量出口策略。
 
-# 用户自定义目标访问域名IPv4数据集合列表文件（dname_ipsets_lst.txt）
-# 0--启用；1--禁用；取值范围：0~1
-# 缺省为禁用（1）。
+# 用户自定义目标访问域名 IPv4 数据集合列表文件（dname_ipsets_lst.txt）
+# 0 -- 启用；1 -- 停用；取值范围：0 ~ 1
+# 缺省为停用（1）。
 DNAME_IPSETS=1
-# 该列表文件位于项目路径内的data目录内，文本文件，名称和路径不可更改。
-# 每一行可定义一个域名数据集合，可定义多个，数量不限。数据集合可在mwan3的WAN口流量策略规则设置中使用。
+# 该列表文件位于项目路径内的 data 目录内，文本文件，名称和路径不可更改。
+# 每一行可定义一个域名数据集合，可定义多个，数量不限。数据集合可在 mwan3 的 WAN 口流量策略规则设置中使用。
 # 格式：
 # 数据集合名称
 # 注意：
 # 数据集合名称在整个路由器系统中具有唯一性，不能重复，否则会创建失败或影响系统中的其他代码运行；输入字符为英
-# 文半角，且符合Linux变量名称命名的规则。
+# 文半角，且符合 Linux 变量名称命名的规则。
 # 例如：
 # MY_DOMAIN_NAME_IPSET_0 # 我的第一个域名数据集合
 # MY_DOMAIN_NAME_IPSET_1
-# 条目起始处加#符号，可忽略该条定义；在每条定义后面加空格，再添加#符号，后面可填写该条目备注。
+# 条目起始处加 # 符号，可忽略该条定义；在每条定义后面加空格，再添加 # 符号，后面可填写该条目备注。
 # 此处仅作为全局变量在系统运行空间中定义和初始化域名数据集合，对域名数据集合进行生命周期管理。
-# 定义完成后请前往OpenWrt的“网络-DHCP/DNS-IP集”选项卡中，给数据集合关联所需域名，每个数据集合可包含多个域名，
-# 最后在mwan3的WAN口流量策略规则中为每个域名数据集合按规则优先级添加和设置单独的出口规则，实现按所访问的域名
+# 定义完成后请前往 OpenWrt 的「网络 - DHCP/DNS - IP集」选项卡中，给数据集合关联所需域名，每个数据集合可包含多个域名，
+# 最后在 mwan3 的 WAN 口流量策略规则中为每个域名数据集合按规则优先级添加和设置单独的出口规则，实现按所访问的域名
 # 分配流量出口的策略。
 
 
 # ---------------------全局变量---------------------
 
 # WAN口最大支持数量
-# 每个IPv4 WAN口对应一个国内网段数据集合
+# 每个 IPv4 WAN 口对应一个国内网段数据集合
 MAX_WAN_PORT="8"
 
-# 国内ISP网络运营商CIDR网段数据文件总数
+# 国内 ISP 网络运营商 CIDR 网段数据文件总数
 ISP_TOTAL="10"
 
-# 国内ISP网络运营商IPv4 CIDR网段数据文件名
+# 国内 ISP 网络运营商 IPv4 CIDR 网段数据文件名
 ISP_DATA_0="chinatelecom_cidr.txt"
 ISP_DATA_1="unicom_cnc_cidr.txt"
 ISP_DATA_2="cmcc_cidr.txt"
@@ -229,7 +229,7 @@ ISP_DATA_7="hk_cidr.txt"
 ISP_DATA_8="mo_cidr.txt"
 ISP_DATA_9="tw_cidr.txt"
 
-# 国内ISP网络运营商IPv6网段数据文件名
+# 国内 ISP 网络运营商 IPv6 网段数据文件名
 ISP_V6_DATA_0="chinatelecom_ipv6.txt"
 ISP_V6_DATA_1="unicom_cnc_ipv6.txt"
 ISP_V6_DATA_2="cmcc_ipv6.txt"
@@ -241,7 +241,7 @@ ISP_V6_DATA_7="hk_ipv6.txt"
 ISP_V6_DATA_8="mo_ipv6.txt"
 ISP_V6_DATA_9="tw_ipv6.txt"
 
-# 国内ISP网络运营商名称
+# 国内 ISP 网络运营商名称
 ISP_NAME_0="CTCC       "
 ISP_NAME_1="CUCC/CNC   "
 ISP_NAME_2="CMCC       "
@@ -253,7 +253,7 @@ ISP_NAME_7="HONGKONG   "
 ISP_NAME_8="MACAO      "
 ISP_NAME_9="TAIWAN     "
 
-# 国内ISP网络运营商名称
+# 国内 ISP 网络运营商名称
 ISP_V6_NAME_0="V6_CTCC    "
 ISP_V6_NAME_1="V6_CUCC/CNC"
 ISP_V6_NAME_2="V6_CMCC    "
@@ -265,29 +265,29 @@ ISP_V6_NAME_7="V6_HONGKONG"
 ISP_V6_NAME_8="V6_MACAO   "
 ISP_V6_NAME_9="V6_TAIWAN  "
 
-# IPv4 WAN端口设备列表
+# IPv4 WAN 端口设备列表
 WAN_DEV_LIST="${WAN_DEV_LIST:-""}"
 
-# IPv6 WAN端口设备列表
+# IPv6 WAN 端口设备列表
 WAN_V6_DEV_LIST="${WAN_V6_DEV_LIST:-""}"
 
-# 可用IPv4 WAN口数量
+# 可用 IPv4 WAN 口数量
 WAN_AVAL_NUM="0"
 
-# 可用IPv6 WAN口数量
+# 可用 IPv6 WAN 口数量
 WAN_V6_AVAL_NUM="0"
 
-# 用户自定义IPv4目标访问网址/网段数据集合列表
+# 用户自定义 IPv4 目标访问网址/网段数据集合列表
 CUSTOM_IPSETS_LST=""
 
-# 用户自定义IPv6目标访问网址/网段数据集合列表
+# 用户自定义 IPv6 目标访问网址/网段数据集合列表
 CUSTOM_V6_IPSETS_LST=""
 
 # 用户自定义目标访问域名数据集合列表
 DNAME_IPSETS_LST=""
 
 # 版本号
-LZ_VERSION=v2.1.0
+LZ_VERSION=v2.1.1
 
 # 项目标识
 PROJECT_ID="lzrules"
@@ -310,34 +310,34 @@ CRONTABS_ROOT_FILENAME="/etc/crontabs/root"
 # 主机网络配置文件名
 HOST_NETWORK_FILENAME="/etc/config/network"
 
-# mwan3配置文件名
+# mwan3 配置文件名
 MWAN3_FILENAME="/etc/config/mwan3"
 
-# mwan3事件通告文件名
+# mwan3 事件通告文件名
 MWAN3_NOTIFY_FILENAME="/etc/mwan3.user"
 
-# 主机dhcp配置文件名
+# 主机 dhcp 配置文件名
 HOST_DHCP_FILENAME="/etc/config/dhcp"
 
-# 更新ISP网络运营商CIDR网段数据文件临时下载目录
+# 更新 ISP 网络运营商 CID R网段数据文件临时下载目录
 PATH_TMP_DATA="${PATH_TMP}/download"
 
-# ISP网络运营商CIDR网段数据文件下载站点URL
+# ISP 网络运营商 CIDR 网段数据文件下载站点URL
 UPDATE_ISPIP_DATA_DOWNLOAD_URL="https://ispip.clang.cn"
 
-# ISP网络运营商CIDR网段数据文件URL列表文件名
+# ISP 网络运营商 CIDR 网段数据文件 URL 列表文件名
 ISPIP_FILE_URL_LIST="ispip_file_url.lst"
 
-# 公网出口IPv4地址查询网站域名
+# 公网出口 IPv4 地址查询网站域名
 PIPDN="whatismyip.akamai.com"
 
-# 公网出口IPv4地址查询备用网站域名
+# 公网出口 IPv4 地址查询备用网站域名
 PIPDNX="checkip.amazonaws.com"
 
-# 用户自定义IPv4网址/网段数据集合列表文件名
+# 用户自定义 IPv4 网址/网段数据集合列表文件名
 CUSTOM_IPSETS_LST_FILENAME="${PATH_DATA}/custom_ipsets_lst.txt"
 
-# 用户自定义IPv6网址/网段数据集合列表文件名
+# 用户自定义 IPv6 网址/网段数据集合列表文件名
 CUSTOM_V6_IPSETS_LST_FILENAME="${PATH_DATA}/custom_ipv6_ipsets_lst.txt"
 
 # 用户自定义目标访问域名数据集合列表文件名
@@ -346,14 +346,14 @@ DNAME_IPSETS_LST_FILENAME="${PATH_DATA}/dname_ipsets_lst.txt"
 # 用户自定义数据集合运行列表临时文件名
 CUSTOM_IPSETS_TMP_LST_FILENAME="${PATH_TMP}/custom_ipsets_tmp.lst"
 
-# IPv4地址正则表达式
+# IPv4 地址正则表达式
 regex_v4='((25[0-5]|(2[0-4]|1[0-9]|[1-9])?[0-9])[\.]){3}(25[0-5]|(2[0-4]|1[0-9]|[1-9])?[0-9])([\/]([1-9]|[1-2][0-9]|3[0-2]))?'
 
-# IPv6地址正则表达式
+# IPv6 地址正则表达式
 regex_v6='(([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:([0-9a-fA-F]{1,4})|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{1,4}){0,4}%[0-9a-zA-Z]+|::(ffff(:0{1,4})?:)?REGEX_IPV4|([0-9a-fA-F]{1,4}:){1,4}:REGEX_IPV4)([\/]([1-9]|([1-9]|1[0-1])[0-9]|12[0-8]))?'
 regex_v6="$( echo "${regex_v6}" | sed "s/REGEX_IPV4/${regex_v4%"([\/]("*}/g" )"
 
-# 用户自定义网络出口源地址外部访问策略规则路优先级
+# 用户自定义策略规则路优先级
 CUSTOM_PRIO="500"
 
 # 脚本操作命令
@@ -567,40 +567,6 @@ get_ipv4_sub_rt_id() {
         tableID="$(( tableID + 1 ))"
     done
     echo "${retVal}"
-}
-
-add_custom_rule() {
-    local tableID="1" ifn="" count="0"
-    until [ "${tableID}" -gt "$(( WAN_AVAL_NUM + WAN_V6_AVAL_NUM ))" ]
-    do
-        ifn="$( ip route show table "${tableID}" 2> /dev/null | awk '/default/ {print $5}' | awk 'NF == 1 && !i[$1]++ {print $1}' )"
-        for ifn in ${ifn}
-        do
-            eval "$( ip -4 -o address show dev "${ifn}" 2> /dev/null | awk 'NF != 0 && $4 ~ "'"^${regex_v4}$"'" {
-                ifa=$4;
-                gsub(/\/.*$/, "", ifa);
-                print "ip rule add from "ifa" table ""'"${tableID}"'"" prio ""'"${CUSTOM_PRIO}"'"" > /dev/null 2>&1; count=\"$(( count + 1 ))\";";
-            }' )"
-        done
-        tableID="$(( tableID + 1 ))"
-    done
-    [ "${count}" != "0" ] && ip route flush cache > /dev/null 2>&1
-    tableID="1" ifn="" count="0"
-    until [ "${tableID}" -gt "$(( WAN_AVAL_NUM + WAN_V6_AVAL_NUM ))" ]
-    do
-        ifn="$( ip -6 route show table "${tableID}" 2> /dev/null | awk '/default/ {print $5}' | awk 'NF == 1 && !i[$1]++ {print $1}' )"
-        for ifn in ${ifn}
-        do
-            eval "$( ip -6 -o address show dev "${ifn}" 2> /dev/null \
-                | awk 'NF != 0 && $4 ~ "'"^${regex_v6}$"'" && $4 !~ /^[fF][eE][89abAB][0-9a-fA-F]:/ {
-                ifa=$4;
-                gsub(/\/.*$/, "", ifa);
-                print "ip -6 rule add from "ifa" table ""'"${tableID}"'"" prio ""'"${CUSTOM_PRIO}"'"" > /dev/null 2>&1; count=\"$(( count + 1 ))\";";
-            }' )"
-        done
-        tableID="$(( tableID + 1 ))"
-    done
-    [ "${count}" != "0" ] && ip -6 route flush cache > /dev/null 2>&1
 }
 
 print_ipv4_address_list() {
@@ -1011,7 +977,7 @@ print_wan_ip() {
             logger -p 1 "${MY_LINE}"
         }
         tableID="$( get_ipv4_sub_rt_id "${ifn}" )"
-        ip rule add from 0.0.0.0 table "${tableID}" prio "${CUSTOM_PRIO}" > /dev/null 2>&1
+        ip rule add from "0.0.0.0" table "${tableID}" prio "${CUSTOM_PRIO}" > /dev/null 2>&1
         ip route flush cache > /dev/null 2>&1
         ifx="$( get_wan_if "${ifn}" )"
         eval "$( ip -4 -o address show dev "${ifn}" 2> /dev/null \
@@ -1043,7 +1009,7 @@ print_wan_ip() {
                 printf("%s %s\n","'"$(lzdate)"'",strbuf);
                 system("logger -p 1 \""strbuf"\"");
         }'
-        ip rule del from 0.0.0.0 table "${tableID}" prio "${CUSTOM_PRIO}" > /dev/null 2>&1
+        ip rule del from "0.0.0.0" table "${tableID}" prio "${CUSTOM_PRIO}" > /dev/null 2>&1
         ip route flush cache > /dev/null 2>&1
     done
     lined="0"
@@ -1091,7 +1057,7 @@ load_ipsets() {
             eval add_net_address_sets "\${PATH_DATA}/\${ISP_DATA_${index}}" "${ISPIP_SET_B}"
             wan="LB"
         else
-            wan="OFF"
+            wan="mwan3"
         fi
         eval name="\${ISP_NAME_${index}}"
         eval num="\$( get_ipv4_data_file_item_total \"\${PATH_DATA}/\${ISP_DATA_${index}}\" )"
@@ -1112,7 +1078,7 @@ load_ipsets() {
             eval add_ipv6_net_address_sets "\${PATH_DATA}/\${ISP_V6_DATA_${index}}" "${ISPIP_V6_SET_B}"
             wan="LB"
         else
-            wan="OFF"
+            wan="mwan3"
         fi
         eval name="\${ISP_V6_NAME_${index}}"
         eval num="\$( get_ipv6_data_file_item_total \"\${PATH_DATA}/\${ISP_V6_DATA_${index}}\" )"
@@ -1387,7 +1353,6 @@ do
     cleaning_user_data
     delete_custom_rule
     get_wan_dev_list
-    add_custom_rule
     delete_ipsets
     create_ipsets
     load_ipsets
