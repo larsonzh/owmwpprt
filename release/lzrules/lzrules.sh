@@ -1,5 +1,5 @@
 #!/bin/sh
-# lzrules.sh v2.1.1
+# lzrules.sh v2.1.2
 # By LZ 妙妙呜 (larsonzhang@gmail.com)
 
 # LZ RULES script for OpenWrt based router
@@ -287,7 +287,7 @@ CUSTOM_V6_IPSETS_LST=""
 DNAME_IPSETS_LST=""
 
 # 版本号
-LZ_VERSION=v2.1.1
+LZ_VERSION=v2.1.2
 
 # 项目标识
 PROJECT_ID="lzrules"
@@ -567,6 +567,40 @@ get_ipv4_sub_rt_id() {
         tableID="$(( tableID + 1 ))"
     done
     echo "${retVal}"
+}
+
+add_custom_rule() {
+    local tableID="1" ifn="" count="0"
+    until [ "${tableID}" -gt "$(( WAN_AVAL_NUM + WAN_V6_AVAL_NUM ))" ]
+    do
+        ifn="$( ip route show table "${tableID}" 2> /dev/null | awk '/default/ {print $5}' | awk 'NF == 1 && !i[$1]++ {print $1}' )"
+        for ifn in ${ifn}
+        do
+            eval "$( ip -4 -o address show dev "${ifn}" 2> /dev/null | awk 'NF != 0 && $4 ~ "'"^${regex_v4}$"'" {
+                ifa=$4;
+                gsub(/\/.*$/, "", ifa);
+                print "ip rule add from "ifa" table ""'"${tableID}"'"" prio ""'"${CUSTOM_PRIO}"'"" > /dev/null 2>&1; count=\"$(( count + 1 ))\";";
+            }' )"
+        done
+        tableID="$(( tableID + 1 ))"
+    done
+    [ "${count}" != "0" ] && ip route flush cache > /dev/null 2>&1
+    tableID="1" ifn="" count="0"
+    until [ "${tableID}" -gt "$(( WAN_AVAL_NUM + WAN_V6_AVAL_NUM ))" ]
+    do
+        ifn="$( ip -6 route show table "${tableID}" 2> /dev/null | awk '/default/ {print $5}' | awk 'NF == 1 && !i[$1]++ {print $1}' )"
+        for ifn in ${ifn}
+        do
+            eval "$( ip -6 -o address show dev "${ifn}" 2> /dev/null \
+                | awk 'NF != 0 && $4 ~ "'"^${regex_v6}$"'" && $4 !~ /^[fF][eE][89abAB][0-9a-fA-F]:/ {
+                ifa=$4;
+                gsub(/\/.*$/, "", ifa);
+                print "ip -6 rule add from "ifa" table ""'"${tableID}"'"" prio ""'"${CUSTOM_PRIO}"'"" > /dev/null 2>&1; count=\"$(( count + 1 ))\";";
+            }' )"
+        done
+        tableID="$(( tableID + 1 ))"
+    done
+    [ "${count}" != "0" ] && ip -6 route flush cache > /dev/null 2>&1
 }
 
 print_ipv4_address_list() {
@@ -977,8 +1011,10 @@ print_wan_ip() {
             logger -p 1 "${MY_LINE}"
         }
         tableID="$( get_ipv4_sub_rt_id "${ifn}" )"
-        ip rule add from "0.0.0.0" table "${tableID}" prio "${CUSTOM_PRIO}" > /dev/null 2>&1
-        ip route flush cache > /dev/null 2>&1
+        [ -n "${tableID}" ] && {
+            ip rule add from "0.0.0.0" table "${tableID}" prio "${CUSTOM_PRIO}" > /dev/null 2>&1
+            ip route flush cache > /dev/null 2>&1
+        }
         ifx="$( get_wan_if "${ifn}" )"
         eval "$( ip -4 -o address show dev "${ifn}" 2> /dev/null \
             | awk 'NF != 0 {
@@ -1009,8 +1045,10 @@ print_wan_ip() {
                 printf("%s %s\n","'"$(lzdate)"'",strbuf);
                 system("logger -p 1 \""strbuf"\"");
         }'
-        ip rule del from "0.0.0.0" table "${tableID}" prio "${CUSTOM_PRIO}" > /dev/null 2>&1
-        ip route flush cache > /dev/null 2>&1
+        [ -n "${tableID}" ] && {
+            ip rule del from "0.0.0.0" table "${tableID}" prio "${CUSTOM_PRIO}" > /dev/null 2>&1
+            ip route flush cache > /dev/null 2>&1
+        }
     done
     lined="0"
     local strbuf="" count="0"
@@ -1353,6 +1391,7 @@ do
     cleaning_user_data
     delete_custom_rule
     get_wan_dev_list
+    add_custom_rule
     delete_ipsets
     create_ipsets
     load_ipsets
