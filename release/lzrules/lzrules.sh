@@ -1,5 +1,5 @@
 #!/bin/sh
-# lzrules.sh v2.1.3
+# lzrules.sh v2.1.4
 # By LZ 妙妙呜 (larsonzhang@gmail.com)
 
 # LZ RULES script for OpenWrt based router
@@ -304,7 +304,7 @@ CUSTOM_V6_IPSETS_LST=""
 DNAME_IPSETS_LST=""
 
 # 版本号
-LZ_VERSION=v2.1.3
+LZ_VERSION=v2.1.4
 
 # 项目标识
 PROJECT_ID="lzrules"
@@ -533,7 +533,7 @@ get_wan_dev_list() {
         ifn="$( echo "${dev_list}" | awk '$4 ~ /^@/ {print $4}' )"
     done
     dev_list="$( eval "$( echo "${dev_list}" | awk '{print "echo "$0" ""\"\$( check_main_rt_dev \""$2"\" \""$4"\" )\"";}' )" \
-        | awk '$5 == "y" {print $1,$2,$3,$4,$4;}' )"
+        | awk '{wan = $1; if ($5 != "y") wan = wan"->?!"; print wan,$2,$3,$4,$4;}' )"
     ifn="$( echo "${dev_list}" | awk '$5 ~ /^(pppoe|ppp)[-]/ {print $5}' )"
     while [ -n "${ifn}" ]; do
         for ifn in ${ifn}
@@ -549,7 +549,7 @@ get_wan_dev_list() {
         done
         ifn="$( echo "${dev_list}" | awk '$5 ~ /^(pppoe|ppp)[-]/ {print $5}' )"
     done
-    WAN_DEV_PROPERTY_LIST="${dev_list}"
+    WAN_DEV_PROPERTY_LIST="$( echo "${dev_list}" | awk '{wan = $1; sub(/->[\?].*$/, "", wan); print wan,$2,$3,$4,$5;}' )"
     wan_list="$( echo "${dev_list}" | awk '$2 != "dhcpv6"' | awk -v count=0 'NF > 0 && !i[$5]++ {print $1,$5; count++; if (count >= "'"${MAX_WAN_PORT}"'") exit;}' )"
     for ifn in $( echo "${wan_list}" | awk '{print $2}' )
     do
@@ -611,6 +611,13 @@ get_wan_dev_list() {
         num="$(( num + 1 ))"
     done
     WAN_V6_AVAL_NUM="${num}"
+}
+
+get_wan_property_dev() {
+    local wan="${1}"
+    [ -n "${WAN_DEV_PROPERTY_LIST}" ] && wan="$( echo "${WAN_DEV_PROPERTY_LIST}" | awk '$1 == "'"${wan}"'" {print $5; exit}' )"
+    [ -z "${wan}" ] && wan="${1}"
+    echo "${wan}"
 }
 
 get_wan_if() {
@@ -721,7 +728,7 @@ add_host_port_rule() {
         [ -n "${str}" ] && str="$( echo "${WAN_DEV_LIST}" | awk '$2 == "'"${str}"'" {print $1; exit;}' )"
         [ -z "${str}" ] && str="None"
     fi
-    strbuf="$( printf "%s %s\t\t%s\t\t%s\n" "[$$]:  " "Host" "IPv4" "${str}" )"
+    strbuf="$( printf "%s %-16s %-16s %s\n" "[$$]:  " "Host" "IPv4" "${str}" )"
     echo "$(lzdate) ${MY_LINE}"
     logger -p 1 "${MY_LINE}"
     echo "$(lzdate) ${strbuf}"
@@ -749,7 +756,7 @@ add_host_port_rule() {
         [ -n "${str}" ] && str="$( echo "${WAN_V6_DEV_LIST}" | awk '$2 == "'"${str}"'" {print $1; exit;}' )"
         [ -z "${str}" ] && str="None"
     fi
-    strbuf="$( printf "%s %s\t\t%s\t\t%s\n" "[$$]:  " "$( printf "%4s" "" )" "IPv6" "${str}" )"
+    strbuf="$( printf "%s %-16s %-16s %s\n" "[$$]:  " "$( printf "%4s" "" )" "IPv6" "${str}" )"
     echo "$(lzdate) ${strbuf}"
     logger -p 1 "${strbuf}"
 }
@@ -941,17 +948,17 @@ print_wan_ispip_item_num() {
                 logger -p 1 "${MY_LINE}"
             }
             num="$( get_ipset_total "${name}" )"
-            wan="$( get_wan_list "${name}" )"
+            wan="$( get_wan_if "$( get_wan_property_dev "$( get_wan_list "${name}" )" )" )"
             if [ -n "${wan}" ]; then
                 for wan in ${wan}
                 do
-                    printf "%s %-12s %-13s\t%s\n" "$(lzdate) [$$]:  " "${wan}" "${name}" "${num}"
-                    logger -p 1 "$( printf "%s %-6s\t%-16s%s\n" "[$$]:  " "${wan}" "${name}" "${num}" )"
+                    printf "%s %-13s %-19s %s\n" "$(lzdate) [$$]:  " "${wan}" "${name}" "${num}"
+                    logger -p 1 "$( printf "%s %-13s %-19s %s\n" "[$$]:  " "${wan}" "${name}" "${num}" )"
                 done
             else
                 wan="$( get_wan_name "${index}" )"
-                printf "%s %-12s %-13s\t%s\n" "$(lzdate) [$$]:  " "${wan}" "${name}" "${num}"
-                logger -p 1 "$( printf "%s %-6s\t%-16s%s\n" "[$$]:  " "${wan}" "${name}" "${num}" )"
+                printf "%s %-13s %-19s %s\n" "$(lzdate) [$$]:  " "${wan}" "${name}" "${num}"
+                logger -p 1 "$( printf "%s %-13s %-19s %s\n" "[$$]:  " "${wan}" "${name}" "${num}" )"
             fi
         fi
         index="$(( index + 1 ))"
@@ -963,17 +970,17 @@ print_wan_ispip_item_num() {
             logger -p 1 "${MY_LINE}"
         }
         num="$( get_ipset_total "${ISPIP_SET_B}" )"
-        wan="$( get_wan_list "${ISPIP_SET_B}" )"
+        wan="$( get_wan_if "$( get_wan_property_dev "$( get_wan_list "${ISPIP_SET_B}" )" )" )"
         if [ -n "${wan}" ]; then
             for wan in ${wan}
             do
-                printf "%s %-12s %-13s\t%s\n" "$(lzdate) [$$]:  " "${wan}" "${ISPIP_SET_B}" "${num}"
-                logger -p 1 "$( printf "%s %-6s\t%-16s%s\n" "[$$]:  " "${wan}" "${ISPIP_SET_B}" "${num}" )"
+                printf "%s %-13s %-19s %s\n" "$(lzdate) [$$]:  " "${wan}" "${ISPIP_SET_B}" "${num}"
+                logger -p 1 "$( printf "%s %-13s %-19s %s\n" "[$$]:  " "${wan}" "${ISPIP_SET_B}" "${num}" )"
             done
         else
             wan="LBX"
-            printf "%s %-12s %-13s\t%s\n" "$(lzdate) [$$]:  " "${wan}" "${ISPIP_SET_B}" "${num}"
-            logger -p 1 "$( printf "%s %-6s\t%-16s%s\n" "[$$]:  " "${wan}" "${ISPIP_SET_B}" "${num}" )"
+            printf "%s %-13s %-19s %s\n" "$(lzdate) [$$]:  " "${wan}" "${ISPIP_SET_B}" "${num}"
+            logger -p 1 "$( printf "%s %-13s %-19s %s\n" "[$$]:  " "${wan}" "${ISPIP_SET_B}" "${num}" )"
         fi
     fi
     lined="0"
@@ -986,17 +993,17 @@ print_wan_ispip_item_num() {
                 logger -p 1 "${MY_LINE}"
             }
             num="$( get_ipset_total "${name%=*}" )"
-            wan="$( get_wan_list "${name%=*}" )"
+            wan="$( get_wan_if "$( get_wan_property_dev "$( get_wan_list "${name%=*}" )" )" )"
             if [ -n "${wan}" ]; then
                 for wan in ${wan}
                 do
-                    printf "%s %-12s %-13s\t%s\n" "$(lzdate) [$$]:  " "${wan}" "${name%=*}" "${num}"
-                    logger -p 1 "$( printf "%s %-6s\t%-16s%s\n" "[$$]:  " "${wan}" "${name%=*}" "${num}" )"
+                    printf "%s %-13s %-19s %s\n" "$(lzdate) [$$]:  " "${wan}" "${name%=*}" "${num}"
+                    logger -p 1 "$( printf "%s %-13s %-19s %s\n" "[$$]:  " "${wan}" "${name%=*}" "${num}" )"
                 done
             else
                 wan="wanX"
-                printf "%s %-12s %-13s\t%s\n" "$(lzdate) [$$]:  " "${wan}" "${name%=*}" "${num}"
-                logger -p 1 "$( printf "%s %-6s\t%-16s%s\n" "[$$]:  " "${wan}" "${name%=*}" "${num}" )"
+                printf "%s %-13s %-19s %s\n" "$(lzdate) [$$]:  " "${wan}" "${name%=*}" "${num}"
+                logger -p 1 "$( printf "%s %-13s %-19s %s\n" "[$$]:  " "${wan}" "${name%=*}" "${num}" )"
             fi
         done
     fi
@@ -1014,17 +1021,17 @@ print_wan_ispip_item_num() {
             [ -n "${buf}" ] && buf="$( uci get "${HOST_DHCP_FILENAME}.${buf}.domain" 2> /dev/null | awk '{print NF; exit}' )"
             [ -z "${buf}" ] && buf="0"
             num="$( get_ipset_total "${name}" )"
-            wan="$( get_wan_list "${name}" )"
+            wan="$( get_wan_if "$( get_wan_property_dev "$( get_wan_list "${name}" )" )" )"
             if [ -n "${wan}" ]; then
                 for wan in ${wan}
                 do
-                    printf "%s %-12s %-13s\t%s%s\n" "$(lzdate) [$$]:  " "${wan}" "${name}" "${num}" "(${buf})"
-                    logger -p 1 "$( printf "%s %-6s\t%-16s%s%s\n" "[$$]:  " "${wan}" "${name}" "${num}" "(${buf})" )"
+                    printf "%s %-13s %-19s %s%s\n" "$(lzdate) [$$]:  " "${wan}" "${name}" "${num}" "[${buf}]"
+                    logger -p 1 "$( printf "%s %-13s %-19s %s%s\n" "[$$]:  " "${wan}" "${name}" "${num}" "[${buf}]" )"
                 done
             else
                 wan="wanX"
-                printf "%s %-12s %-13s\t%s%s\n" "$(lzdate) [$$]:  " "${wan}" "${name}" "${num}" "(${buf})"
-                logger -p 1 "$( printf "%s %-6s\t%-16s%s%s\n" "[$$]:  " "${wan}" "${name}" "${num}" "(${buf})" )"
+                printf "%s %-13s %-19s %s%s\n" "$(lzdate) [$$]:  " "${wan}" "${name}" "${num}" "(${buf})"
+                logger -p 1 "$( printf "%s %-13s %-19s %s%s\n" "[$$]:  " "${wan}" "${name}" "${num}" "[${buf}]" )"
             fi
         done
     fi
@@ -1042,17 +1049,17 @@ print_ipv6_wan_ispip_item_num() {
                 logger -p 1 "${MY_LINE}"
             }
             num="$( get_ipv6_ipset_total "${name}" )"
-            wan="$( get_wan_list "${name}" )"
+            wan="$( get_wan_if_v6 "$( get_wan_property_dev "$( get_wan_list "${name}" )" )" )"
             if [ -n "${wan}" ]; then
                 for wan in ${wan}
                 do
-                    printf "%s %-12s %-13s\t%s\n" "$(lzdate) [$$]:  " "${wan}" "${name}" "${num}"
-                    logger -p 1 "$( printf "%s %-6s\t%-16s%s\n" "[$$]:  " "${wan}" "${name}" "${num}" )"
+                    printf "%s %-13s %-19s %s\n" "$(lzdate) [$$]:  " "${wan}" "${name}" "${num}"
+                    logger -p 1 "$( printf "%s %-13s %-19s %s\n" "[$$]:  " "${wan}" "${name}" "${num}" )"
                 done
             else
                 wan="$( get_wan_name_v6 "${index}" )"
-                printf "%s %-12s %-13s\t%s\n" "$(lzdate) [$$]:  " "${wan}" "${name}" "${num}"
-                logger -p 1 "$( printf "%s %-6s\t%-16s%s\n" "[$$]:  " "${wan}" "${name}" "${num}" )"
+                printf "%s %-13s %-19s %s\n" "$(lzdate) [$$]:  " "${wan}" "${name}" "${num}"
+                logger -p 1 "$( printf "%s %-13s %-19s %s\n" "[$$]:  " "${wan}" "${name}" "${num}" )"
             fi
         fi
         index="$(( index + 1 ))"
@@ -1064,17 +1071,17 @@ print_ipv6_wan_ispip_item_num() {
             logger -p 1 "${MY_LINE}"
         }
         num="$( get_ipv6_ipset_total "${ISPIP_V6_SET_B}" )"
-        wan="$( get_wan_list "${ISPIP_V6_SET_B}" )"
+        wan="$( get_wan_if_v6 "$( get_wan_property_dev "$( get_wan_list "${ISPIP_V6_SET_B}" )" )" )"
         if [ -n "${wan}" ]; then
             for wan in ${wan}
             do
-                printf "%s %-12s %-13s\t%s\n" "$(lzdate) [$$]:  " "${wan}" "${ISPIP_V6_SET_B}" "${num}"
-                logger -p 1 "$( printf "%s %-6s\t%-16s%s\n" "[$$]:  " "${wan}" "${ISPIP_V6_SET_B}" "${num}" )"
+                printf "%s %-13s %-19s %s\n" "$(lzdate) [$$]:  " "${wan}" "${ISPIP_V6_SET_B}" "${num}"
+                logger -p 1 "$( printf "%s %-13s %-19s %s\n" "[$$]:  " "${wan}" "${ISPIP_V6_SET_B}" "${num}" )"
             done
         else
             wan="LBX"
-            printf "%s %-12s %-13s\t%s\n" "$(lzdate) [$$]:  " "${wan}" "${ISPIP_V6_SET_B}" "${num}"
-            logger -p 1 "$( printf "%s %-6s\t%-16s%s\n" "[$$]:  " "${wan}" "${ISPIP_V6_SET_B}" "${num}" )"
+            printf "%s %-13s %-19s %s\n" "$(lzdate) [$$]:  " "${wan}" "${ISPIP_V6_SET_B}" "${num}"
+            logger -p 1 "$( printf "%s %-13s %-19s %s\n" "[$$]:  " "${wan}" "${ISPIP_V6_SET_B}" "${num}" )"
         fi
     fi
     lined="0"
@@ -1087,17 +1094,17 @@ print_ipv6_wan_ispip_item_num() {
                 logger -p 1 "${MY_LINE}"
             }
             num="$( get_ipv6_ipset_total "${name%=*}" )"
-            wan="$( get_wan_list "${name%=*}" )"
+            wan="$( get_wan_if_v6 "$( get_wan_property_dev "$( get_wan_list "${name%=*}" )" )" )"
             if [ -n "${wan}" ]; then
                 for wan in ${wan}
                 do
-                    printf "%s %-12s %-13s\t%s\n" "$(lzdate) [$$]:  " "${wan}" "${name%=*}" "${num}"
-                    logger -p 1 "$( printf "%s %-6s\t%-16s%s\n" "[$$]:  " "${wan}" "${name%=*}" "${num}" )"
+                    printf "%s %-13s %-19s %s\n" "$(lzdate) [$$]:  " "${wan}" "${name%=*}" "${num}"
+                    logger -p 1 "$( printf "%s %-13s %-19s %s\n" "[$$]:  " "${wan}" "${name%=*}" "${num}" )"
                 done
             else
                 wan="wanX"
-                printf "%s %-12s %-13s\t%s\n" "$(lzdate) [$$]:  " "${wan}" "${name%=*}" "${num}"
-                logger -p 1 "$( printf "%s %-6s\t%-16s%s\n" "[$$]:  " "${wan}" "${name%=*}" "${num}" )"
+                printf "%s %-13s %-19s %s\n" "$(lzdate) [$$]:  " "${wan}" "${name%=*}" "${num}"
+                logger -p 1 "$( printf "%s %-13s %-19s %s\n" "[$$]:  " "${wan}" "${name%=*}" "${num}" )"
             fi
         done
     fi
@@ -1192,7 +1199,7 @@ print_wan_ip() {
                 wanip="Public IP Unobtainable.";
                 isp="";
                 if ($4 ~ "'"^${regex_v4%"([\/]("*}$"'") {wanip=$4; isp=$3;}
-                strbuf=sprintf("%s   %-8s %-12s  %-12s  %s","'"[$$]:"'","'"${ifx}"'",$2,wanip,isp);
+                strbuf=sprintf("%s   %-8s %-16s %-15s %s","'"[$$]:"'","'"${ifx}"'",$2,wanip,isp);
                 printf("%s %s\n","'"$(lzdate)"'",strbuf);
                 system("logger -p 1 \""strbuf"\"");
         }'
@@ -1218,9 +1225,9 @@ print_wan_ip() {
         for item in ${item}
         do
             if [ "${count}" = "0" ]; then
-                strbuf="$( printf "%s %-8s %s  %s\n" "[$$]:  " "${ifx}" "${item}" "$( get_isp_name_v6 "${item}" )" )"
+                strbuf="$( printf "%s %-8s %s %s\n" "[$$]:  " "${ifx}" "${item}" "$( get_isp_name_v6 "${item}" )" )"
             else
-                strbuf="$( printf "%s %-8s %s  %s\n" "[$$]:  " "$( printf "%${#ifx}s" "" )" "${item}" "$( get_isp_name_v6 "${item}" )" )"
+                strbuf="$( printf "%s %-8s %s %s\n" "[$$]:  " "$( printf "%${#ifx}s" "" )" "${item}" "$( get_isp_name_v6 "${item}" )" )"
             fi
             [ "${lined}" = "0" ] && {
                 lined="1"
@@ -1250,8 +1257,8 @@ load_ipsets() {
         fi
         eval name="\${ISP_NAME_${index}}"
         eval num="\$( get_ipv4_data_file_item_total \"\${PATH_DATA}/\${ISP_DATA_${index}}\" )"
-        printf "%s %s\t%s\t\t%s\n" "$(lzdate) [$$]:  " "${name}" "${wan}" "${num}" 
-        logger -p 1 "$( printf "%s %-11s\t%-6s\t%s\n" "[$$]:  " "${name}" "${wan}" "${num}" )"
+        printf "%s %-16s %-16s %s\n" "$(lzdate) [$$]:  " "${name}" "${wan}" "${num}" 
+        logger -p 1 "$( printf "%s %-16s %-16s %s\n" "[$$]:  " "${name}" "${wan}" "${num}" )"
         index="$(( index + 1 ))"
     done
     echo "$(lzdate) ${MY_LINE}"
@@ -1271,8 +1278,8 @@ load_ipsets() {
         fi
         eval name="\${ISP_V6_NAME_${index}}"
         eval num="\$( get_ipv6_data_file_item_total \"\${PATH_DATA}/\${ISP_V6_DATA_${index}}\" )"
-        printf "%s %s\t%s\t\t%s\n" "$(lzdate) [$$]:  " "${name}" "${wan}" "${num}" 
-        logger -p 1 "$( printf "%s %-11s\t%-6s\t%s\n" "[$$]:  " "${name}" "${wan}" "${num}" )"
+        printf "%s %-16s %-16s %s\n" "$(lzdate) [$$]:  " "${name}" "${wan}" "${num}" 
+        logger -p 1 "$( printf "%s %-16s %-16s %s\n" "[$$]:  " "${name}" "${wan}" "${num}" )"
         index="$(( index + 1 ))"
     done
     for name in ${CUSTOM_IPSETS_LST}
