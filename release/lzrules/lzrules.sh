@@ -1,5 +1,5 @@
 #!/bin/sh
-# lzrules.sh v2.1.2
+# lzrules.sh v2.1.3
 # By LZ 妙妙呜 (larsonzhang@gmail.com)
 
 # LZ RULES script for OpenWrt based router
@@ -28,6 +28,7 @@
 #    入相应 WAN 口策略规则条目中的「IP 配置」字段内。填写时，在下拉框中选择「自定义」，在输入框中书写完毕后按回车键，
 #    即可完成数据集合名称的输入。卸载脚本时，请在下拉框中选择「--请选择--」项，然后按页面中的「保存」，最后在「规
 #    则」界面中「保存并应用」，就可以解除该 WAN 口数据集合与相应规则的绑定关系。
+# 5. 脚本适用于 OpenWrt 22.03.7 及以前版本的部分原生固件。更早版本或第三方编译制作的固件未经测试，也可能不支持。
 
 # BEGIN
 
@@ -36,65 +37,71 @@
 
 # ----------------用户运行策略自定义区----------------
 
-# 中国电信 IPv4/IPv6 目标网段流量（网段数据文件：chinatelecom_cidr.txt/chinatelecom_ipv6.txt）
+# 中国电信 IPv4/IPv6 目标网段客户端流量（网段数据文件：chinatelecom_cidr.txt/chinatelecom_ipv6.txt）
 # 0 -- 第一 WAN 口；1 -- 第二 WAN 口；···；7 -- 第八 WAN 口；8 -- 负载均衡；9 -- 未知流量（mwan3 中设置处理）；取值范围：0 ~ 9
 # 缺省：IPv4 流量 -- 第一 WAN 口（0）；IPv6 流量 -- 未知流量（9）。
 ISP_0_WAN_PORT=0
 ISP_0_WAN_PORT_V6=9
 
-# 中国联通/网通 IPv4/IPv6 目标网段流量（网段数据文件：unicom_cnc_cidr.txt/unicom_cnc_ipv6.txt）
+# 中国联通/网通 IPv4/IPv6 目标网段客户端流量（网段数据文件：unicom_cnc_cidr.txt/unicom_cnc_ipv6.txt）
 # 0 -- 第一 WAN 口；1 -- 第二 WAN 口；···；7 -- 第八 WAN 口；8 -- 负载均衡；9 -- 未知流量（mwan3 中设置处理）；取值范围：0 ~ 9
 # 缺省：IPv4 流量 -- 第一 WAN 口（0）；IPv6 流量 -- 未知流量（9）。
 ISP_1_WAN_PORT=0
 ISP_1_WAN_PORT_V6=9
 
-# 中国移动 IPv4/IPv6 目标网段流量（网段数据文件：cmcc_cidr.txt/cmcc_ipv6.txt）
+# 中国移动 IPv4/IPv6 目标网段客户端流量（网段数据文件：cmcc_cidr.txt/cmcc_ipv6.txt）
 # 0 -- 第一 WAN 口；1 -- 第二 WAN 口；···；7 -- 第八 WAN 口；8 -- 负载均衡；9 -- 未知流量（mwan3 中设置处理）；取值范围：0 ~ 9
 # 缺省：IPv4 流量 -- 第二 WAN 口（1）；IPv6 流量 -- 未知流量（9）。
 ISP_2_WAN_PORT=1
 ISP_2_WAN_PORT_V6=9
 
-# 中国铁通 IPv4/IPv6 目标网段流量（网段数据文件：crtc_cidr.txt/crtc_ipv6.txt）
+# 中国铁通 IPv4/IPv6 目标网段客户端流量（网段数据文件：crtc_cidr.txt/crtc_ipv6.txt）
 # 0 -- 第一 WAN 口；1 -- 第二 WAN 口；···；7 -- 第八 WAN 口；8 -- 负载均衡；9 -- 未知流量（mwan3 中设置处理）；取值范围：0 ~ 9
 # 缺省：IPv4 流量 -- 第二 WAN 口（1）；IPv6 流量 -- 未知流量（9）。
 ISP_3_WAN_PORT=1
 ISP_3_WAN_PORT_V6=9
 
-# 中国教育网 IPv4/IPv6 目标网段流量（网段数据文件：cernet_cidr.txt/cernet_ipv6.txt）
+# 中国教育网 IPv4/IPv6 目标网段客户端流量（网段数据文件：cernet_cidr.txt/cernet_ipv6.txt）
 # 0 -- 第一 WAN 口；1 -- 第二 WAN 口；···；7 -- 第八 WAN 口；8 -- 负载均衡；9 -- 未知流量（mwan3 中设置处理）；取值范围：0 ~ 9
 # 缺省：IPv4 流量 -- 第二 WAN 口（1）；IPv6 流量 -- 未知流量（9）。
 ISP_4_WAN_PORT=1
 ISP_4_WAN_PORT_V6=9
 
-# 长城宽带/鹏博士 IPv4/IPv6 目标网段流量（网段数据文件：gwbn_cidr.txt/gwbn_ipv6.txt）
+# 长城宽带/鹏博士 IPv4/IPv6 目标网段客户端流量（网段数据文件：gwbn_cidr.txt/gwbn_ipv6.txt）
 # 0 -- 第一 WAN 口；1 -- 第二 WAN 口；···；7 -- 第八 WAN 口；8 -- 负载均衡；9 -- 未知流量（mwan3 中设置处理）；取值范围：0 ~ 9
 # 缺省：IPv4 流量 -- 第二 WAN 口（1）；IPv6 流量 -- 未知流量（9）。
 ISP_5_WAN_PORT=1
 ISP_5_WAN_PORT_V6=9
 
-# 中国大陆其他运营商 IPv4/IPv6 目标网段流量（网段数据文件：othernet_cidr.txt/othernet_ipv6.txt）
+# 中国大陆其他运营商 IPv4/IPv6 目标网段客户端流量（网段数据文件：othernet_cidr.txt/othernet_ipv6.txt）
 # 0 -- 第一 WAN 口；1 -- 第二 WAN 口；···；7 -- 第八 WAN 口；8 -- 负载均衡；9 -- 未知流量（mwan3 中设置处理）；取值范围：0 ~ 9
 # 缺省：IPv4 流量 -- 第二 WAN 口（0）；IPv6 流量 -- 未知流量（9）。
 ISP_6_WAN_PORT=0
 ISP_6_WAN_PORT_V6=9
 
-# 香港地区运营商 IPv4/IPv6 目标网段流量（网段数据文件：hk_cidr.txt/hk_ipv6.txt）
+# 香港地区运营商 IPv4/IPv6 目标网段客户端流量（网段数据文件：hk_cidr.txt/hk_ipv6.txt）
 # 0 -- 第一 WAN 口；1 -- 第二 WAN 口；···；7 -- 第八 WAN 口；8 -- 负载均衡；9 -- 未知流量（mwan3 中设置处理）；取值范围：0 ~ 9
 # 缺省：IPv4 流量 -- 第二 WAN 口（0）；IPv6 流量 -- 未知流量（9）。
 ISP_7_WAN_PORT=0
 ISP_7_WAN_PORT_V6=9
 
-# 澳门地区运营商 IPv4/IPv6 目标网段流量（网段数据文件：mo_cidr.txt/mo_ipv6.txt）
+# 澳门地区运营商 IPv4/IPv6 目标网段客户端流量（网段数据文件：mo_cidr.txt/mo_ipv6.txt）
 # 0 -- 第一 WAN 口；1 -- 第二 WAN 口；···；7 -- 第八 WAN 口；8 -- 负载均衡；9 -- 未知流量（mwan3 中设置处理）；取值范围：0 ~ 9
 # 缺省：IPv4 流量 -- 第二 WAN 口（0）；IPv6 流量 -- 未知流量（9）。
 ISP_8_WAN_PORT=0
 ISP_8_WAN_PORT_V6=9
 
-# 台湾地区运营商 IPv4/IPv6 目标网段流量（网段数据文件：tw_cidr.txt/tw_ipv6.txt）
+# 台湾地区运营商 IPv4/IPv6 目标网段客户端流量（网段数据文件：tw_cidr.txt/tw_ipv6.txt）
 # 0 -- 第一 WAN 口；1 -- 第二 WAN 口；···；7 -- 第八 WAN 口；8 -- 负载均衡；9 -- 未知流量（mwan3 中设置处理）；取值范围：0 ~ 9
 # 缺省：IPv4 流量 -- 第二 WAN 口（0）；IPv6 流量 -- 未知流量（9）。
 ISP_9_WAN_PORT=0
 ISP_9_WAN_PORT_V6=9
+
+# 路由器本机内部应用访问外部 IPv4/IPv6 流量出口
+# 0 -- 第一 WAN 口；1 -- 第二 WAN 口；···；7 -- 第八 WAN 口；8 -- 系统分配（按主路由表中缺省设置自动分配出口）；取值范围：0 ~ 8
+# 缺省：IPv4 流量 -- 系统分配（8）；IPv6 流量 -- 系统分配（8）。
+HOST_WAN_PORT=8
+HOST_V6_WAN_PORT=8
 
 # 定时更新 ISP 网络运营商 CIDR 网段数据时间参数定义
 # 建议在当天 1:30 后执行定时更新。
@@ -191,6 +198,7 @@ CUSTOM_V6_IPSETS=1
 # 0 -- 启用；1 -- 停用；取值范围：0 ~ 1
 # 缺省为停用（1）。
 DNAME_IPSETS=1
+# 该功能仅适用于 OpenWrt 防火墙 FW3 版本的固件。
 # 该列表文件位于项目路径内的 data 目录内，文本文件，名称和路径不可更改。
 # 每一行可定义一个域名数据集合，可定义多个，数量不限。数据集合可在 mwan3 的 WAN 口流量策略规则设置中使用。
 # 格式：
@@ -265,11 +273,20 @@ ISP_V6_NAME_7="V6_HONGKONG"
 ISP_V6_NAME_8="V6_MACAO   "
 ISP_V6_NAME_9="V6_TAIWAN  "
 
+# WAN 端口设备属性列表
+WAN_DEV_PROPERTY_LIST="${WAN_DEV_PROPERTY_LIST:-""}"
+
 # IPv4 WAN 端口设备列表
 WAN_DEV_LIST="${WAN_DEV_LIST:-""}"
 
 # IPv6 WAN 端口设备列表
 WAN_V6_DEV_LIST="${WAN_V6_DEV_LIST:-""}"
+
+# IPv4 主路由表网卡接口设备列表
+RT_DEV_LIST="${RT_DEV_LIST:-""}"
+
+# IPv6 主路由表网卡接口设备列表
+RT_V6_DEV_LIST="${RT_V6_DEV_LIST:-""}"
 
 # 可用 IPv4 WAN 口数量
 WAN_AVAL_NUM="0"
@@ -287,7 +304,7 @@ CUSTOM_V6_IPSETS_LST=""
 DNAME_IPSETS_LST=""
 
 # 版本号
-LZ_VERSION=v2.1.2
+LZ_VERSION=v2.1.3
 
 # 项目标识
 PROJECT_ID="lzrules"
@@ -447,6 +464,8 @@ cleaning_user_data() {
     ! echo "${ISP_7_WAN_PORT}" | grep -q '^[0-9]$' && ISP_7_WAN_PORT=0
     ! echo "${ISP_8_WAN_PORT}" | grep -q '^[0-9]$' && ISP_8_WAN_PORT=0
     ! echo "${ISP_9_WAN_PORT}" | grep -q '^[0-9]$' && ISP_9_WAN_PORT=0
+    ! echo "${HOST_WAN_PORT}" | grep -q '^[0-8]$' && HOST_WAN_PORT=8
+    ! echo "${HOST_V6_WAN_PORT}" | grep -q '^[0-8]$' && HOST_V6_WAN_PORT=8
     local index="0"
     until [ "${index}" -ge "${ISP_TOTAL}" ]
     do
@@ -464,22 +483,100 @@ cleaning_user_data() {
     ! echo "${DNAME_IPSETS}" | grep -q '^[0-1]$' && DNAME_IPSETS=1
 }
 
-get_wan_dev_if() {
-    uci show "${MWAN3_FILENAME}" 2> /dev/null \
-        | awk -F '=' '$2 == "interface" {print $1}' \
-        | awk -F '.' 'NF >= 2 {system("'"uci show ${MWAN3_FILENAME}."'"$2"'".family 2> /dev/null"'");}' \
-        | awk -v count=0 -F '.' '$3 ~ "'"\'${1}\'"'" {print $2; count++; if (count >= "'"${MAX_WAN_PORT}"'") exit;}'
+check_main_rt_dev() {
+    local retVal="x"
+    if [ "${1}" = "dhcpv6" ]; then
+        echo "${RT_V6_DEV_LIST}" | grep -q "${2}" && retVal="y"
+    else
+        echo "${RT_DEV_LIST}" | grep -q "${2}" && retVal="y"
+    fi
+    echo "${retVal}"
 }
 
 get_wan_dev_list() {
-    local wan_list=""  wan_v6_list=""  wan="" wan_v6="" wan_dev="" num="0"
-    local dev_list="$( eval "$( eval "$( uci show "${MWAN3_FILENAME}" 2> /dev/null \
-        | awk -F '=' '$2 == "interface" {print $1}' \
-        | awk -F '.' 'NF >= 2 {system("'"uci show ${MWAN3_FILENAME}."'"$2".family 2> /dev/null");}' \
-        | awk -F '.' '$3 ~ "'"\'ipv4|ipv6\'"'" {print "echo "$2,"'"\\\"\$( uci get \\\"${HOST_NETWORK_FILENAME}."'"$2"'".device\\\" 2> /dev/null )\\\""'";}' )" \
-        | awk '{if (NF == 2) print "echo "$2; else print "'"uci get \\\"${HOST_NETWORK_FILENAME}."'"$1"'".ifname\\\" 2> /dev/null"'";}' )" \
-        | awk 'NF == 1 && $1 !~ /^@/ && !i[$1]++ {print $1}' \
-        | awk -v count=0 'NF > 0 {print $1; count++; if (count >= "'"${MAX_WAN_PORT}"'") exit;}' )"
+    RT_DEV_LIST="$( ip route show 2> /dev/null | awk '/default/ {print $5}' | awk 'NF == 1 && !i[$1]++ {print $1}' )"
+    RT_V6_DEV_LIST="$( ip -6 route show 2> /dev/null | awk '/default/ {print $7}' | awk 'NF == 1 && !i[$1]++ {print $1}' )"
+    local wan_list=""  wan_v6_list="" ifn="" wan="" num="0"
+    local dev_list="$( eval "$( uci show network 2> /dev/null \
+        | awk -F '=' '$2 == "interface" {
+            ifn = $1;
+            gsub(/^.*[\.]/, "", ifn);
+            print "echo "ifn"^""\"\$( uci get network."ifn".proto 2> /dev/nul )\"""^""\"\$( uci get network."ifn".device 2> /dev/nul )\"""^""\"\$( uci get network."ifn".ifname 2> /dev/nul )\"";
+        }' )" \
+        | awk -F '^' '{
+            if (NF == 3)
+                print $0;
+            else
+                print $1,$2,$3;
+        }' \
+        | awk '$2 ~ /^(static|dhcp|dhcpv6|pppoe|ppp|none)$/ && $3 !~ /^(lo|br-lan)$/ {
+            if ($2 ~ /^(pppoe|ppp)$/ && $3 !~ /^@/)
+                print $1,$2,$3,$2"-"$1;
+            else
+                print $0,$3;
+        }' \
+        | awk '!i[$1]++ {print $0}' )"
+    ifn="$( echo "${dev_list}" | awk '$4 ~ /^@/ {print $4}' )"
+    while [ -n "${ifn}" ]; do
+        for ifn in ${ifn}
+        do
+            dev_list="$( echo "${dev_list}" | awk -v str="$( echo "${dev_list}" \
+                | awk '$1 == "'"${ifn#*@}"'" {print $4; exit;}' )" '{
+                    if (str == "")
+                        str = "Error";
+                    if ($4 == "'"${ifn}"'")
+                        print $1,$2,$3,str; 
+                    else
+                        print $0;
+                }' )"
+        done
+        ifn="$( echo "${dev_list}" | awk '$4 ~ /^@/ {print $4}' )"
+    done
+    dev_list="$( eval "$( echo "${dev_list}" | awk '{print "echo "$0" ""\"\$( check_main_rt_dev \""$2"\" \""$4"\" )\"";}' )" \
+        | awk '$5 == "y" {print $1,$2,$3,$4,$4;}' )"
+    ifn="$( echo "${dev_list}" | awk '$5 ~ /^(pppoe|ppp)[-]/ {print $5}' )"
+    while [ -n "${ifn}" ]; do
+        for ifn in ${ifn}
+        do
+            dev_list="$( echo "${dev_list}" | awk -v str="$( echo "${dev_list}" \
+                | awk '($1 == "'"${ifn#*pppoe-}"'" || $1 == "'"${ifn#*ppp-}"'") {print $5; exit;}' )" '{
+                    if ($5 == "'"${ifn}"'") {
+                        if (str != "")
+                            print $1,$2,$3,$4,str; 
+                    } else
+                        print $0;
+                }' )"
+        done
+        ifn="$( echo "${dev_list}" | awk '$5 ~ /^(pppoe|ppp)[-]/ {print $5}' )"
+    done
+    WAN_DEV_PROPERTY_LIST="${dev_list}"
+    wan_list="$( echo "${dev_list}" | awk '$2 != "dhcpv6"' | awk -v count=0 'NF > 0 && !i[$5]++ {print $1,$5; count++; if (count >= "'"${MAX_WAN_PORT}"'") exit;}' )"
+    for ifn in $( echo "${wan_list}" | awk '{print $2}' )
+    do
+        wan="$( echo "${dev_list}" | awk 'NF == 5 && $2 == "pppoe" && $5 == "'"${ifn}"'" {print $1; exit;}' )"
+        [ -z "${wan}" ] && wan="$( echo "${dev_list}" | awk 'NF == 5 && $2 == "ppp" && $5 == "'"${ifn}"'" {print $1; exit;}' )"
+        [ -z "${wan}" ] && wan="$( echo "${dev_list}" | awk 'NF == 5 && $2 == "dhcp" && $5 == "'"${ifn}"'" {print $1; exit;}' )"
+        [ -z "${wan}" ] && wan="$( echo "${dev_list}" | awk 'NF == 5 && $2 == "static" && $5 == "'"${ifn}"'" {print $1; exit;}' )"
+        [ -z "${wan}" ] && wan="$( echo "${dev_list}" | awk 'NF == 5 && $2 == "none" && $5 == "'"${ifn}"'" {print $1; exit;}' )"
+        [ -n "${wan}" ] && wan_list="$( echo "${wan_list}" | awk 'NF == 2 {
+                if ($2 == "'"${ifn}"'")
+                    print "'"${wan}"'",$2;
+                else
+                    print $0;
+            }' )"
+    done
+    wan_v6_list="$( echo "${dev_list}" | awk '$2 == "dhcpv6"' | awk -v count=0 'NF > 0 && !i[$5]++ {print $1,$5; count++; if (count >= "'"${MAX_WAN_PORT}"'") exit;}' )"
+    for ifn in $( echo "${wan_v6_list}" | awk '{print $2}' )
+    do
+        wan="$( echo "${dev_list}" | awk 'NF == 5 && $2 == "dhcpv6" && $5 == "'"${ifn}"'" {print $1; exit;}' )"
+        [ -n "${wan}" ] && wan_v6_list="$( echo "${wan_v6_list}" | awk 'NF == 2 {
+                if ($2 == "'"${ifn}"'")
+                    print "'"${wan}"'",$2;
+                else
+                    print $0;
+            }' )"
+    done
+    dev_list="$( echo "${dev_list}" | awk -v count=0 'NF > 0 && !i[$5]++ {print $5; count++; if (count >= "'"${MAX_WAN_PORT}"'") exit;}' )"
     num="$( echo "${dev_list}" | wc -l )"
     until [ "${num}" -ge "${MAX_WAN_PORT}" ]
     do
@@ -488,36 +585,29 @@ get_wan_dev_list() {
     done
     WAN_DEV_LIST="$( echo "${dev_list}" | awk -v count=0 'NF > 0 {print "wan"count"X",$1; count++;}' )"
     WAN_V6_DEV_LIST="$( echo "${dev_list}" | awk -v count=0 'NF > 0 {print "wan"count"v6X",$1; count++;}' )"
-    # wan_list="$( sed -e 's/^[[:space:]]\+//g' -e 's/[[:space:]]\+/ /g' -e 's/[[:space:]]$//g' "${MWAN3_FILENAME}" 2> /dev/null \
-    #     | awk -v flag=0 -v port="" '/^config interface/ {flag=1; port=$3; next} /^config/ {flag=0; next} flag && $0 ~ "'"^option family \'ipv4\'"'" {print port}' \
-    #     | sed "s/[\']//g" )"
-    wan_list="$( get_wan_dev_if "ipv4" )"
     num="0"
-    for wan in ${wan_list}
+    for ifn in $( echo "${wan_list}" | awk '{print $2}' )
     do
-        wan_dev="$( uci get "${HOST_NETWORK_FILENAME}.${wan}.device" 2> /dev/null )"
-        if [ -n "${wan_dev}" ]; then
-            echo "${wan_dev}" | grep -q '^@' && wan_dev="$( uci get "${HOST_NETWORK_FILENAME}.${wan_dev#*@}.device" 2> /dev/null )"
-        else
-            wan_dev="$( uci get "${HOST_NETWORK_FILENAME}.${wan}.ifname" 2> /dev/null )"
-            echo "${wan_dev}" | grep -q '^@' && wan_dev="$( uci get "${HOST_NETWORK_FILENAME}.${wan_dev#*@}.ifname" 2> /dev/null )"
-        fi
-        [ -n "${wan_dev}" ] && WAN_DEV_LIST="$( echo "${WAN_DEV_LIST}" | sed -e "s/^[[:alnum:]]\+[[:space:]]\(${wan_dev}\)$/${wan} \1/" )"
+        WAN_DEV_LIST="$( echo "${WAN_DEV_LIST}" | awk -v str="$( echo "${wan_list}" \
+            | awk '$2 == "'"${ifn}"'" {print $1; exit;}' )" '{
+                if (str != "" && $2 == "'"${ifn}"'")
+                    print str,$2;
+                else
+                    print $0;
+            }' )"
         num="$(( num + 1 ))"
     done
     WAN_AVAL_NUM="${num}"
-    wan_v6_list="$( get_wan_dev_if "ipv6" )"
     num="0"
-    for wan_v6 in ${wan_v6_list}
+    for ifn in $( echo "${wan_v6_list}" | awk '{print $2}' )
     do
-        wan_dev="$( uci get "${HOST_NETWORK_FILENAME}.${wan_v6}.device" 2> /dev/null )"
-        if [ -n "${wan_dev}" ]; then
-            echo "${wan_dev}" | grep -q '^@' && wan_dev="$( uci get "${HOST_NETWORK_FILENAME}.${wan_dev#*@}.device" 2> /dev/null )"
-        else
-            wan_dev="$( uci get "${HOST_NETWORK_FILENAME}.${wan_v6}.ifname" 2> /dev/null )"
-            echo "${wan_dev}" | grep -q '^@' && wan_dev="$( uci get "${HOST_NETWORK_FILENAME}.${wan_dev#*@}.ifname" 2> /dev/null )"
-        fi
-        [ -n "${wan_dev}" ] && WAN_V6_DEV_LIST="$( echo "${WAN_V6_DEV_LIST}" | sed -e "s/^[[:alnum:]]\+[[:space:]]\(${wan_dev}\)$/${wan_v6} \1/" )"
+        WAN_V6_DEV_LIST="$( echo "${WAN_V6_DEV_LIST}" | awk -v str="$( echo "${wan_v6_list}" \
+            | awk '$2 == "'"${ifn}"'" {print $1; exit;}' )" '{
+                if (str != "" && $2 == "'"${ifn}"'")
+                    print str,$2;
+                else
+                    print $0;
+            }' )"
         num="$(( num + 1 ))"
     done
     WAN_V6_AVAL_NUM="${num}"
@@ -539,7 +629,7 @@ get_wan_dev() {
 
 get_wan_if_v6() {
     local wan="${1}"
-    [ -n "${WAN_DEV_LIST}" ] && wan="$( echo "${WAN_V6_DEV_LIST}" | awk '$2 == "'"${wan}"'" {print $1; exit}' )"
+    [ -n "${WAN_V6_DEV_LIST}" ] && wan="$( echo "${WAN_V6_DEV_LIST}" | awk '$2 == "'"${wan}"'" {print $1; exit}' )"
     [ -z "${wan}" ] && wan="${1}"
     echo "${wan}"
 }
@@ -558,18 +648,22 @@ get_wan_name_v6() {
     echo "${wan}"
 }
 
-get_ipv4_sub_rt_id() {
+get_sub_rt_id() {
     local retVal="" tableID="1"
+    if [ "${1}" != "4" ] && [ "${1}" != "6" ]; then
+        echo "${retVal}"
+        return
+    fi
     until [ "${tableID}" -gt "$(( WAN_AVAL_NUM + WAN_V6_AVAL_NUM ))" ]
     do
-        retVal="$( ip -4 route show table "${tableID}" 2> /dev/null | awk '/default/ && $5 == "'"${1}"'" {print "'"${tableID}"'"; exit}' )"
+        retVal="$( ip "-${1}" route show table "${tableID}" 2> /dev/null | awk '/default/ && $5 == "'"${2}"'" {print "'"${tableID}"'"; exit}' )"
         [ -n "${retVal}" ] && break
         tableID="$(( tableID + 1 ))"
     done
     echo "${retVal}"
 }
 
-add_custom_rule() {
+add_wan_address_rule() {
     local tableID="1" ifn="" count="0"
     until [ "${tableID}" -gt "$(( WAN_AVAL_NUM + WAN_V6_AVAL_NUM ))" ]
     do
@@ -601,6 +695,63 @@ add_custom_rule() {
         tableID="$(( tableID + 1 ))"
     done
     [ "${count}" != "0" ] && ip -6 route flush cache > /dev/null 2>&1
+}
+
+add_host_port_rule() {
+    local ifn="" port="" str="System" tableID="" strbuf=""
+    while true
+    do
+        [ "${HOST_WAN_PORT}" -ge "${MAX_WAN_PORT}" ] && break
+        ifn="$( echo "${WAN_DEV_LIST}" | awk 'NR == (1 + "'"${HOST_WAN_PORT}"'") && $1 !~ /X$/ && $2 !~ /X$/ {print $1; exit;}' )"
+        [ -z "${ifn}" ] && break
+        eval "$( echo "${WAN_DEV_PROPERTY_LIST}" | awk '$1 == "'"${ifn}"'" {print "port="$4"; str="$1; exit;}' )"
+        [ -z "${port}" ] && break
+        ! echo "${RT_DEV_LIST}" | grep -q "^${port}$" && break
+        tableID="$( get_sub_rt_id "4" "${port}" )"
+        [ -z "${tableID}" ] && break
+        ip rule add from "0.0.0.0" table "${tableID}" prio "${CUSTOM_PRIO}" > /dev/null 2>&1
+        ip route flush cache > /dev/null 2>&1
+        break
+    done
+    if [ "${WAN_AVAL_NUM}" = "0" ]; then
+        str="None"
+    elif [ -z "${tableID}" ]; then
+        str="$( ip route show 2> /dev/null | awk '$1 == "default" {print $5; exit;}' )"
+        [ -n "${str}" ] && str="$( echo "${WAN_DEV_PROPERTY_LIST}" | awk '$4 == "'"${str}"'" {print $5; exit;}' )"
+        [ -n "${str}" ] && str="$( echo "${WAN_DEV_LIST}" | awk '$2 == "'"${str}"'" {print $1; exit;}' )"
+        [ -z "${str}" ] && str="None"
+    fi
+    strbuf="$( printf "%s %s\t\t%s\t\t%s\n" "[$$]:  " "Host" "IPv4" "${str}" )"
+    echo "$(lzdate) ${MY_LINE}"
+    logger -p 1 "${MY_LINE}"
+    echo "$(lzdate) ${strbuf}"
+    logger -p 1 "${strbuf}"
+    ifn="" port="" str="System" tableID=""
+    while true
+    do
+        [ "${HOST_V6_WAN_PORT}" -ge "${MAX_WAN_PORT}" ] && break
+        ifn="$( echo "${WAN_V6_DEV_LIST}" | awk 'NR == (1 + "'"${HOST_V6_WAN_PORT}"'") && $1 !~ /X$/ && $2 !~ /X$/ {print $1; exit;}' )"
+        [ -z "${ifn}" ] && break
+        eval "$( echo "${WAN_DEV_PROPERTY_LIST}" | awk '$1 == "'"${ifn}"'" {print "port="$4"; str="$1; exit;}' )"
+        [ -z "${port}" ] && break
+        ! echo "${RT_V6_DEV_LIST}" | grep -q "^${port}$" && break
+        tableID="$( get_sub_rt_id "6" "${port}" )"
+        [ -z "${tableID}" ] && break
+        ip -6 rule add from "::" table "${tableID}" prio "${CUSTOM_PRIO}" > /dev/null 2>&1
+        ip -6 route flush cache > /dev/null 2>&1
+        break
+    done
+    if [ "${WAN_V6_AVAL_NUM}" = "0" ]; then
+        str="None"
+    elif [ -z "${tableID}" ]; then
+        str="$( ip -6 route show 2> /dev/null | awk '$1 == "default" {print $7; exit;}' )"
+        [ -n "${str}" ] && str="$( echo "${WAN_DEV_PROPERTY_LIST}" | awk '$4 == "'"${str}"'" {print $5; exit;}' )"
+        [ -n "${str}" ] && str="$( echo "${WAN_V6_DEV_LIST}" | awk '$2 == "'"${str}"'" {print $1; exit;}' )"
+        [ -z "${str}" ] && str="None"
+    fi
+    strbuf="$( printf "%s %s\t\t%s\t\t%s\n" "[$$]:  " "$( printf "%4s" "" )" "IPv6" "${str}" )"
+    echo "$(lzdate) ${strbuf}"
+    logger -p 1 "${strbuf}"
 }
 
 print_ipv4_address_list() {
@@ -762,11 +913,11 @@ get_ipv6_data_file_item_total() {
 }
 
 get_wan_list() {
-    local wan_list="$( uci show "${MWAN3_FILENAME}" 2> /dev/null \
-            | awk -F '.' '$0 ~ "'"ipset=\'${1}\'"'" && $2 != "" {system("'"uci get ${MWAN3_FILENAME}."'"$2".use_policy 2> /dev/null")}' \
-            | awk '$1 != "" {system("'"uci get ${MWAN3_FILENAME}."'"$1".use_member 2> /dev/null")}' \
+    local wan_list="$( uci show mwan3 2> /dev/null \
+            | awk -F '.' '$0 ~ "'"ipset=\'${1}\'"'" && $2 != "" {system("uci get mwan3."$2".use_policy 2> /dev/null");}' \
+            | awk '$1 != "" {system("uci get mwan3."$1".use_member 2> /dev/null");}' \
             | sed -e 's/[[:space:]]\+/\n/g'  -e '/^[[:space:]]*$/d' \
-            | awk '$1 != "" {system("'"uci get ${MWAN3_FILENAME}."'"$1".interface  2> /dev/null")}' )"
+            | awk '$1 != "" {system("uci get mwan3."$1".interface  2> /dev/null");}' )"
     echo "${wan_list}"
 }
 
@@ -1002,15 +1153,15 @@ get_isp_name_v6() {
 
 print_wan_ip() {
     local tableID=""
-    local ifn="$( ip route show 2> /dev/null | awk '/default/ {print $5}' | awk 'NF == 1 && !i[$1]++ {print $1}' )" ifx="" item="" lined="0"
-    for ifn in ${ifn}
+    local ifn="" ifx="" item="" lined="0"
+    for ifn in ${RT_DEV_LIST}
     do
         [ "${lined}" = "0" ] && {
             lined="1"
             echo "$(lzdate) ${MY_LINE}"
             logger -p 1 "${MY_LINE}"
         }
-        tableID="$( get_ipv4_sub_rt_id "${ifn}" )"
+        tableID="$( get_sub_rt_id "4" "${ifn}" )"
         [ -n "${tableID}" ] && {
             ip rule add from "0.0.0.0" table "${tableID}" prio "${CUSTOM_PRIO}" > /dev/null 2>&1
             ip route flush cache > /dev/null 2>&1
@@ -1052,8 +1203,8 @@ print_wan_ip() {
     done
     lined="0"
     local strbuf="" count="0"
-    ifn="$( ip -6 route show 2> /dev/null | awk '/default/ {print $7}' | awk 'NF == 1 && !i[$1]++ {print $1}' )"
-    for ifn in ${ifn}
+    ifn=""
+    for ifn in ${RT_V6_DEV_LIST}
     do
         ifx="$( get_wan_if_v6 "$( get_wan_dev "${ifn#*pppoe-}" )" )"
         echo "${ifn}" | grep -q '^pppoe-' && ifx="${ifx} pppoe"
@@ -1069,7 +1220,7 @@ print_wan_ip() {
             if [ "${count}" = "0" ]; then
                 strbuf="$( printf "%s %-8s %s  %s\n" "[$$]:  " "${ifx}" "${item}" "$( get_isp_name_v6 "${item}" )" )"
             else
-                strbuf="$( printf "%s %-8s %s  %s\n" "[$$]:  " "$( printf "%${#ifx}s" )" "${item}" "$( get_isp_name_v6 "${item}" )" )"
+                strbuf="$( printf "%s %-8s %s  %s\n" "[$$]:  " "$( printf "%${#ifx}s" "" )" "${item}" "$( get_isp_name_v6 "${item}" )" )"
             fi
             [ "${lined}" = "0" ] && {
                 lined="1"
@@ -1148,6 +1299,7 @@ load_ipsets() {
     print_wan_ispip_item_num
     print_ipv6_wan_ispip_item_num
     print_wan_ip
+    add_host_port_rule
 }
 
 create_url_list() {
@@ -1391,7 +1543,7 @@ do
     cleaning_user_data
     delete_custom_rule
     get_wan_dev_list
-    add_custom_rule
+    add_wan_address_rule
     delete_ipsets
     create_ipsets
     load_ipsets
