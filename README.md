@@ -3,7 +3,7 @@ OpenWrt Multi WAN Port Policy Routing Tool
 
 OpenWrt 固件多 WAN 口策略路由分流工具
 
-**v2.1.4**
+**v2.1.5**
 
 本工具使用 Shell 脚本编写，可在 OpenWrt 固件的路由器上，基于 mwan3 的强大功能，按照各网络运营商互联网地址分布情况，针对路由器上每个 WAN 口生成多个不同的目标网段数据集合，灵活绑定到 mwan3 的 WAN 口策略规则中，实现全网段的多 WAN 口数据流量分流控制策略。
 

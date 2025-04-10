@@ -1,5 +1,5 @@
 #!/bin/sh
-# lzrules.sh v2.1.4
+# lzrules.sh v2.1.5
 # By LZ 妙妙呜 (larsonzhang@gmail.com)
 
 # LZ RULES script for OpenWrt based router
@@ -304,7 +304,7 @@ CUSTOM_V6_IPSETS_LST=""
 DNAME_IPSETS_LST=""
 
 # 版本号
-LZ_VERSION=v2.1.4
+LZ_VERSION=v2.1.5
 
 # 项目标识
 PROJECT_ID="lzrules"
@@ -486,9 +486,9 @@ cleaning_user_data() {
 check_main_rt_dev() {
     local retVal="x"
     if [ "${1}" = "dhcpv6" ]; then
-        echo "${RT_V6_DEV_LIST}" | grep -q "${2}" && retVal="y"
+        echo "${RT_V6_DEV_LIST}" | grep -q "^${2}$" && retVal="y"
     else
-        echo "${RT_DEV_LIST}" | grep -q "${2}" && retVal="y"
+        echo "${RT_DEV_LIST}" | grep -q "^${2}$" && retVal="y"
     fi
     echo "${retVal}"
 }
@@ -657,14 +657,15 @@ get_wan_name_v6() {
 
 get_sub_rt_id() {
     local retVal="" tableID="1"
-    if [ "${1}" != "4" ] && [ "${1}" != "6" ]; then
+    if { [ "${1}" != "4" ] && [ "${1}" != "6" ]; } || [ -z "${2}" ]; then
         echo "${retVal}"
         return
     fi
-    until [ "${tableID}" -gt "$(( WAN_AVAL_NUM + WAN_V6_AVAL_NUM ))" ]
+    retVal="$( ip "-${1}" rule show 2> /dev/null \
+        | awk 'NF >= 7 && $1 ~ /^[0-9]+[:]$/ && $2" "$3" "$4 == "from all iif" && $5 == "'"${2}"'" && $6 == "lookup" {print $7; exit;}' )"
+    while [ -z "${retVal}" ] && [ "${tableID}" -le "$(( WAN_AVAL_NUM + WAN_V6_AVAL_NUM ))" ]
     do
         retVal="$( ip "-${1}" route show table "${tableID}" 2> /dev/null | awk '/default/ && $5 == "'"${2}"'" {print "'"${tableID}"'"; exit}' )"
-        [ -n "${retVal}" ] && break
         tableID="$(( tableID + 1 ))"
     done
     echo "${retVal}"
@@ -797,7 +798,7 @@ print_ipv6_address_list() {
 }
 
 delete_custom_rule() {
-    eval "$( ip rule show | awk -v count="0" '$1 == "'"${CUSTOM_PRIO}:"'" \
+    eval "$( ip rule show 2> /dev/null | awk -v count="0" '$1 == "'"${CUSTOM_PRIO}:"'" \
         && $2 == "from" && $3 ~ "'"^${regex_v4%"([\/]("*}$"'" && $4 == "lookup" && NF == 5 {
         print "ip rule del "$2" "$3" table "$5" prio ""'"${CUSTOM_PRIO}"'"" > /dev/null 2>&1";
         count++;
@@ -805,7 +806,7 @@ delete_custom_rule() {
         if (count != "0")
             print "ip route flush cache > /dev/null 2>&1";
     }' )"
-    eval "$( ip -6 rule show | awk -v count="0" '$1 == "'"${CUSTOM_PRIO}:"'" \
+    eval "$( ip -6 rule show 2> /dev/null | awk -v count="0" '$1 == "'"${CUSTOM_PRIO}:"'" \
         && $2 == "from" && $3 ~ "'"^${regex_v6%"([\/]("*}$"'" && $4 == "lookup" && NF == 5 {
         print "ip -6 rule del "$2" "$3" table "$5" prio ""'"${CUSTOM_PRIO}"'"" > /dev/null 2>&1";
         count++;
