@@ -1,5 +1,5 @@
 #!/bin/sh
-# lzrules.sh v2.1.5
+# lzrules.sh v2.1.6
 # By LZ 妙妙呜 (larsonzhang@gmail.com)
 
 # LZ RULES script for OpenWrt based router
@@ -304,7 +304,7 @@ CUSTOM_V6_IPSETS_LST=""
 DNAME_IPSETS_LST=""
 
 # 版本号
-LZ_VERSION=v2.1.5
+LZ_VERSION=v2.1.6
 
 # 项目标识
 PROJECT_ID="lzrules"
@@ -662,7 +662,12 @@ get_sub_rt_id() {
         return
     fi
     retVal="$( ip "-${1}" rule show 2> /dev/null \
-        | awk 'NF >= 7 && $1 ~ /^[0-9]+[:]$/ && $2" "$3" "$4 == "from all iif" && $5 == "'"${2}"'" && $6 == "lookup" {print $7; exit;}' )"
+        | awk 'NF >= 7 && $1 ~ /^[0-9]+[:]$/ && $2" "$3" "$4 == "from all iif" && $5 == "'"${2}"'" && $6 == "lookup" {print $7;}' )"
+    for retVal in ${retVal}
+    do
+        retVal="$( ip "-${1}" route show table "${retVal}" 2> /dev/null | awk '/default/ && $5 == "'"${2}"'" {print "'"${retVal}"'"; exit}' )"
+        [ -n "${retVal}" ] && break
+    done
     while [ -z "${retVal}" ] && [ "${tableID}" -le "$(( WAN_AVAL_NUM + WAN_V6_AVAL_NUM ))" ]
     do
         retVal="$( ip "-${1}" route show table "${tableID}" 2> /dev/null | awk '/default/ && $5 == "'"${2}"'" {print "'"${tableID}"'"; exit}' )"
@@ -672,35 +677,31 @@ get_sub_rt_id() {
 }
 
 add_wan_address_rule() {
-    local tableID="1" ifn="" count="0"
-    until [ "${tableID}" -gt "$(( WAN_AVAL_NUM + WAN_V6_AVAL_NUM ))" ]
+    local tableID="" ifn="" count="0"
+    ifn="$( ip route show 2> /dev/null | awk '/default/ {print $5}' | awk 'NF == 1 && !i[$1]++ {print $1}' )"
+    for ifn in ${ifn}
     do
-        ifn="$( ip route show table "${tableID}" 2> /dev/null | awk '/default/ {print $5}' | awk 'NF == 1 && !i[$1]++ {print $1}' )"
-        for ifn in ${ifn}
-        do
-            eval "$( ip -4 -o address show dev "${ifn}" 2> /dev/null | awk 'NF != 0 && $4 ~ "'"^${regex_v4}$"'" {
-                ifa=$4;
-                gsub(/\/.*$/, "", ifa);
-                print "ip rule add from "ifa" table ""'"${tableID}"'"" prio ""'"${CUSTOM_PRIO}"'"" > /dev/null 2>&1; count=\"$(( count + 1 ))\";";
-            }' )"
-        done
-        tableID="$(( tableID + 1 ))"
+        tableID="$( get_sub_rt_id "4" "${ifn}" )"
+        [ -z "${tableID}" ] && continue
+        eval "$( ip -4 -o address show dev "${ifn}" 2> /dev/null | awk 'NF != 0 && $4 ~ "'"^${regex_v4}$"'" {
+            ifa=$4;
+            gsub(/\/.*$/, "", ifa);
+            print "ip rule add from "ifa" table ""'"${tableID}"'"" prio ""'"${CUSTOM_PRIO}"'"" > /dev/null 2>&1; count=\"$(( count + 1 ))\";";
+        }' )"
     done
     [ "${count}" != "0" ] && ip route flush cache > /dev/null 2>&1
-    tableID="1" ifn="" count="0"
-    until [ "${tableID}" -gt "$(( WAN_AVAL_NUM + WAN_V6_AVAL_NUM ))" ]
+    tableID="" ifn="" count="0"
+    ifn="$( ip -6 route show 2> /dev/null | awk '/default/ {print $7}' | awk 'NF == 1 && !i[$1]++ {print $1}' )"
+    for ifn in ${ifn}
     do
-        ifn="$( ip -6 route show table "${tableID}" 2> /dev/null | awk '/default/ {print $5}' | awk 'NF == 1 && !i[$1]++ {print $1}' )"
-        for ifn in ${ifn}
-        do
-            eval "$( ip -6 -o address show dev "${ifn}" 2> /dev/null \
-                | awk 'NF != 0 && $4 ~ "'"^${regex_v6}$"'" && $4 !~ /^[fF][eE][89abAB][0-9a-fA-F]:/ {
-                ifa=$4;
-                gsub(/\/.*$/, "", ifa);
-                print "ip -6 rule add from "ifa" table ""'"${tableID}"'"" prio ""'"${CUSTOM_PRIO}"'"" > /dev/null 2>&1; count=\"$(( count + 1 ))\";";
-            }' )"
-        done
-        tableID="$(( tableID + 1 ))"
+        tableID="$( get_sub_rt_id "6" "${ifn}" )"
+        [ -z "${tableID}" ] && continue
+        eval "$( ip -6 -o address show dev "${ifn}" 2> /dev/null \
+            | awk 'NF != 0 && $4 ~ "'"^${regex_v6}$"'" && $4 !~ /^[fF][eE][89abAB][0-9a-fA-F]:/ {
+            ifa=$4;
+            gsub(/\/.*$/, "", ifa);
+            print "ip -6 rule add from "ifa" table ""'"${tableID}"'"" prio ""'"${CUSTOM_PRIO}"'"" > /dev/null 2>&1; count=\"$(( count + 1 ))\";";
+        }' )"
     done
     [ "${count}" != "0" ] && ip -6 route flush cache > /dev/null 2>&1
 }
