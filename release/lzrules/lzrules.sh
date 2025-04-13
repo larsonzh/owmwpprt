@@ -697,7 +697,7 @@ get_sub_rt_id() {
     done
     echo "${retVal}"
 }
- 
+
 add_wan_address_rule() {
     local tableID="" ifn="" count="0"
     ifn="$( ip route show 2> /dev/null | awk '/default/ {print $5}' | awk 'NF == 1 && !i[$1]++ {print $1}' )"
