@@ -1,5 +1,5 @@
 #!/bin/sh
-# lzrules.sh v2.1.6
+# lzrules.sh v2.1.7
 # By LZ 妙妙呜 (larsonzhang@gmail.com)
 
 # LZ RULES script for OpenWrt based router
@@ -304,7 +304,7 @@ CUSTOM_V6_IPSETS_LST=""
 DNAME_IPSETS_LST=""
 
 # 版本号
-LZ_VERSION=v2.1.6
+LZ_VERSION=v2.1.7
 
 # 项目标识
 PROJECT_ID="lzrules"
@@ -665,12 +665,34 @@ get_sub_rt_id() {
         | awk 'NF >= 7 && $1 ~ /^[0-9]+[:]$/ && $2" "$3" "$4 == "from all iif" && $5 == "'"${2}"'" && $6 == "lookup" {print $7;}' )"
     for retVal in ${retVal}
     do
-        retVal="$( ip "-${1}" route show table "${retVal}" 2> /dev/null | awk '/default/ && $5 == "'"${2}"'" {print "'"${retVal}"'"; exit}' )"
+        retVal="$( ip "-${1}" route show table "${retVal}" 2> /dev/null \
+            | awk '/default/ {
+                metric = 0;
+                for (i = 1; i <= NF; i++) {
+                    if ($i == "metric" && $(i + 1) ~ /^[0-9]+$/) {
+                        metric = $(i + 1);
+                        break;
+                    }
+                }
+                print metric,$5 | "sort -t \" \" -k 2 -n";
+            }' \
+            | awk 'NR == 1 && $2 == "'"${2}"'" {print "'"${retVal}"'"; exit;}' )"
         [ -n "${retVal}" ] && break
     done
     while [ -z "${retVal}" ] && [ "${tableID}" -le "$(( WAN_AVAL_NUM + WAN_V6_AVAL_NUM ))" ]
     do
-        retVal="$( ip "-${1}" route show table "${tableID}" 2> /dev/null | awk '/default/ && $5 == "'"${2}"'" {print "'"${tableID}"'"; exit}' )"
+        retVal="$( ip "-${1}" route show table "${tableID}" 2> /dev/null \
+            | awk '/default/ {
+                metric = 0;
+                for (i = 1; i <= NF; i++) {
+                    if ($i == "metric" && $(i + 1) ~ /^[0-9]+$/) {
+                        metric = $(i + 1);
+                        break;
+                    }
+                }
+                print metric,$5 | "sort -t \" \" -k 2 -n";
+            }' \
+            | awk 'NR == 1 && $2 == "'"${2}"'" {print "'"${tableID}"'"; exit;}' )"
         tableID="$(( tableID + 1 ))"
     done
     echo "${retVal}"
