@@ -666,7 +666,7 @@ get_main_rt_default_dev() {
                     break;
                 }
             }
-            print metric,$("'"${1}"'" + 1) | "sort -t \" \" -k 2 -n";
+            print metric,$("'"${1}"'" + 1) | "sort -t \" \" -k 1 -n";
         }' \
         | awk 'NR == 1 {print $2; exit;}'
 }
@@ -681,7 +681,7 @@ check_dev_sub_rt_id() {
                     break;
                 }
             }
-            print metric,$5 | "sort -t \" \" -k 2 -n";
+            print metric,$5 | "sort -t \" \" -k 1 -n";
         }' \
         | awk 'NR == 1 && $2 == "'"${2}"'" {print "'"${3}"'"; exit;}'
 }
