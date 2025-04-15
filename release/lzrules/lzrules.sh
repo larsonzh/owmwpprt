@@ -1,5 +1,5 @@
 #!/bin/sh
-# lzrules.sh v2.1.6
+# lzrules.sh v2.1.8
 # By LZ 妙妙呜 (larsonzhang@gmail.com)
 
 # LZ RULES script for OpenWrt based router
@@ -304,7 +304,7 @@ CUSTOM_V6_IPSETS_LST=""
 DNAME_IPSETS_LST=""
 
 # 版本号
-LZ_VERSION=v2.1.6
+LZ_VERSION=v2.1.8
 
 # 项目标识
 PROJECT_ID="lzrules"
@@ -655,6 +655,37 @@ get_wan_name_v6() {
     echo "${wan}"
 }
 
+get_main_rt_default_dev() {
+    [ "${1}" != "4" ] && [ "${1}" != "6" ] && { echo ""; return; }
+    ip "-${1}" route show 2> /dev/null \
+        | awk '/default/ {
+            metric = 0;
+            for (i = 1; i <= NF; i++) {
+                if ($i == "metric" && $(i + 1) ~ /^[0-9]+$/) {
+                    metric = $(i + 1);
+                    break;
+                }
+            }
+            print metric,$("'"${1}"'" + 1) | "sort -t \" \" -k 2 -n";
+        }' \
+        | awk 'NR == 1 {print $2; exit;}'
+}
+
+check_dev_sub_rt_id() {
+    ip "-${1}" route show table "${3}" 2> /dev/null \
+        | awk '/default/ {
+            metric = 0;
+            for (i = 1; i <= NF; i++) {
+                if ($i == "metric" && $(i + 1) ~ /^[0-9]+$/) {
+                    metric = $(i + 1);
+                    break;
+                }
+            }
+            print metric,$5 | "sort -t \" \" -k 2 -n";
+        }' \
+        | awk 'NR == 1 && $2 == "'"${2}"'" {print "'"${3}"'"; exit;}'
+}
+
 get_sub_rt_id() {
     local retVal="" tableID="1"
     if { [ "${1}" != "4" ] && [ "${1}" != "6" ]; } || [ -z "${2}" ]; then
@@ -665,12 +696,12 @@ get_sub_rt_id() {
         | awk 'NF >= 7 && $1 ~ /^[0-9]+[:]$/ && $2" "$3" "$4 == "from all iif" && $5 == "'"${2}"'" && $6 == "lookup" {print $7;}' )"
     for retVal in ${retVal}
     do
-        retVal="$( ip "-${1}" route show table "${retVal}" 2> /dev/null | awk '/default/ && $5 == "'"${2}"'" {print "'"${retVal}"'"; exit}' )"
+        retVal="$( check_dev_sub_rt_id "${1}" "${2}" "${retVal}" )"
         [ -n "${retVal}" ] && break
     done
     while [ -z "${retVal}" ] && [ "${tableID}" -le "$(( WAN_AVAL_NUM + WAN_V6_AVAL_NUM ))" ]
     do
-        retVal="$( ip "-${1}" route show table "${tableID}" 2> /dev/null | awk '/default/ && $5 == "'"${2}"'" {print "'"${tableID}"'"; exit}' )"
+        retVal="$( check_dev_sub_rt_id "${1}" "${2}" "${tableID}" )"
         tableID="$(( tableID + 1 ))"
     done
     echo "${retVal}"
@@ -725,7 +756,7 @@ add_host_port_rule() {
     if [ "${WAN_AVAL_NUM}" = "0" ]; then
         str="None"
     elif [ -z "${tableID}" ]; then
-        str="$( ip route show 2> /dev/null | awk '$1 == "default" {print $5; exit;}' )"
+        str="$( get_main_rt_default_dev "4" )"
         [ -n "${str}" ] && str="$( echo "${WAN_DEV_PROPERTY_LIST}" | awk '$4 == "'"${str}"'" {print $5; exit;}' )"
         [ -n "${str}" ] && str="$( echo "${WAN_DEV_LIST}" | awk '$2 == "'"${str}"'" {print $1; exit;}' )"
         [ -z "${str}" ] && str="None"
@@ -753,7 +784,7 @@ add_host_port_rule() {
     if [ "${WAN_V6_AVAL_NUM}" = "0" ]; then
         str="None"
     elif [ -z "${tableID}" ]; then
-        str="$( ip -6 route show 2> /dev/null | awk '$1 == "default" {print $7; exit;}' )"
+        str="$( get_main_rt_default_dev "6" )"
         [ -n "${str}" ] && str="$( echo "${WAN_DEV_PROPERTY_LIST}" | awk '$4 == "'"${str}"'" {print $5; exit;}' )"
         [ -n "${str}" ] && str="$( echo "${WAN_V6_DEV_LIST}" | awk '$2 == "'"${str}"'" {print $1; exit;}' )"
         [ -z "${str}" ] && str="None"
