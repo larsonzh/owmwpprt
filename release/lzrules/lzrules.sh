@@ -1,5 +1,5 @@
 #!/bin/sh
-# lzrules.sh v2.1.8
+# lzrules.sh v2.1.9
 # By LZ 妙妙呜 (larsonzhang@gmail.com)
 
 # LZ RULES script for OpenWrt based router
@@ -21,8 +21,12 @@
 #     wget-ssl
 #     dnsmasq-full
 #    注：dnsmasq-full 安装前需卸载删除原有的 dnsmasq 软件包。
-# 2. 脚本中的 WAN 口对应实际的物理网卡接口，每个 WAN 口根据用户在 network 文件中接口设置，可能包含 IPv4 和 IPv6 
-#    协议的两个虚拟接口，按照 OpenWrt「网络 - MultiWAN 管理器 - 接口」配置界面里的 IPv4/6 协议接口设定顺序排列。
+# 2. 路由器上的 WAN 口是本地网络连接外部广域网络的通信接口。脚本中的 WAN 口不是用户定义和命名的逻辑接口，而是路由器
+#    设备上实际的物理网卡接口，或是在网卡设备上定义的 VLAN 子接口。用户在 network 文件或 OpenWrt「网络 - 接口」页面
+#    中配置网络接口时，DHCP 客户端、DHCPv6 客户端、PPP、PPPoE、静态地址等相同或不同协议的多个逻辑接口，可以共享使用
+#    同一个 WAN 口。在 network 文件或 OpenWrt「网络 - 接口」页面中，排除掉所有本地网络及回环设备后，按照每个物理网卡
+#    接口（或 VLAN 子接口）设备，从上到下首次被某个逻辑接口使用或关联时所构成的先后顺序，所有 WAN 口升序排列为「第一 
+#    WAN 口」至「第八 WAN 口」，出口参数对应为 0 ~ 7。
 # 3. 脚本已涵盖中国地区所有运营商 IPv4/IPv6 目标网段，访问国外的流量出口在「MultiWAN 管理器」中配置出口策略规则。
 # 4. 在脚本中配置完流量出口后，需在「MultiWAN 管理器 - 规则」界面内，将 WAN 口数据集合名称（如：ISPIP_SET_0），填
 #    入相应 WAN 口策略规则条目中的「IP 配置」字段内。填写时，在下拉框中选择「自定义」，在输入框中书写完毕后按回车键，
@@ -125,7 +129,7 @@ RETRY_NUM=5
 # 的主要作用就是为 mwan3 生成可供其多个 WAN 口通道选择使用的目标流量网段地址数据集合，从而实现更复杂的业务策略。
 
 # WAN 口国内 IPv4 网段数据集合名称
-# 从上往下按 mwan3 设置中第一 WAN 口、第二 WAN 口至第八 WAN 口的顺序排列，每个 WAN 口一个，可最多对应八个物理 WAN 口的使用。
+# 从上往下按 mwan3 设置中第一 WAN 口、第二 WAN 口至第八 WAN 口的顺序排列，每个 WAN 口一个，可最多对应八个 WAN 口的使用。
 ISPIP_SET_0="ISPIP_SET_0"
 ISPIP_SET_1="ISPIP_SET_1"
 ISPIP_SET_2="ISPIP_SET_2"
@@ -136,7 +140,7 @@ ISPIP_SET_6="ISPIP_SET_6"
 ISPIP_SET_7="ISPIP_SET_7"
 
 # WAN 口国内 IPv6 网段数据集合名称
-# 从上往下按 mwan3 设置中第一 WAN 口、第二 WAN 口至第八 WAN 口的顺序排列，每个 WAN 口一个，可最多对应八个物理 WAN 口的使用。
+# 从上往下按 mwan3 设置中第一 WAN 口、第二 WAN 口至第八 WAN 口的顺序排列，每个 WAN 口一个，可最多对应八个 WAN 口的使用。
 ISPIP_V6_SET_0="ISPIP_V6_SET_0"
 ISPIP_V6_SET_1="ISPIP_V6_SET_1"
 ISPIP_V6_SET_2="ISPIP_V6_SET_2"
@@ -304,7 +308,7 @@ CUSTOM_V6_IPSETS_LST=""
 DNAME_IPSETS_LST=""
 
 # 版本号
-LZ_VERSION=v2.1.8
+LZ_VERSION=v2.1.9
 
 # 项目标识
 PROJECT_ID="lzrules"
@@ -483,81 +487,87 @@ cleaning_user_data() {
     ! echo "${DNAME_IPSETS}" | grep -q '^[0-1]$' && DNAME_IPSETS=1
 }
 
-check_main_rt_dev() {
-    local retVal="x"
-    if [ "${1}" = "dhcpv6" ]; then
-        echo "${RT_V6_DEV_LIST}" | grep -q "^${2}$" && retVal="y"
+ifstatus_dev() {
+    local l3="${2}"
+    if [ "${l3}" != "l3" ]; then
+        l3="device"
     else
-        echo "${RT_DEV_LIST}" | grep -q "^${2}$" && retVal="y"
+        l3="l3_device"
     fi
-    echo "${retVal}"
+    ifstatus "${1}" 2> /dev/null \
+        | awk -v count="0" '$1 == "\"""'"${l3}"'""\":" {
+            count++;
+            ifn = $2;
+            gsub(/[^[:alnum:]]/, "", ifn);
+            if (ifn != "")
+                print ifn;
+            else
+                print "Error";
+        } END{
+            if (count == "0")
+                print "Error";
+        }'
 }
 
 get_wan_dev_list() {
     RT_DEV_LIST="$( ip route show 2> /dev/null | awk '/default/ {print $5}' | awk 'NF == 1 && !i[$1]++ {print $1}' )"
     RT_V6_DEV_LIST="$( ip -6 route show 2> /dev/null | awk '/default/ {print $7}' | awk 'NF == 1 && !i[$1]++ {print $1}' )"
     local wan_list=""  wan_v6_list="" ifn="" wan="" num="0"
-    local dev_list="$( eval "$( uci show network 2> /dev/null \
+    local dev_list="$( eval "$( eval "$( uci show network 2> /dev/null \
         | awk -F '=' '$2 == "interface" {
             ifn = $1;
             gsub(/^.*[\.]/, "", ifn);
-            print "echo "ifn"^""\"\$( uci get network."ifn".proto 2> /dev/nul )\"""^""\"\$( uci get network."ifn".device 2> /dev/nul )\"""^""\"\$( uci get network."ifn".ifname 2> /dev/nul )\"";
+            print "echo "ifn" \"\$( uci get network."ifn".proto 2> /dev/nul )\" \"\$( uci get network."ifn".device 2> /dev/nul )\" \"\$( uci get network."ifn".ifname 2> /dev/nul )\"";
         }' )" \
-        | awk -F '^' '{
-            if (NF == 3)
-                print $0;
-            else
-                print $1,$2,$3;
-        }' \
-        | awk '$2 ~ /^(static|dhcp|dhcpv6|pppoe|ppp|none)$/ && $3 !~ /^(lo|br-lan)$/ {
-            if ($2 ~ /^(pppoe|ppp)$/ && $3 !~ /^@/)
-                print $1,$2,$3,$2"-"$1;
-            else
-                print $0,$3;
-        }' \
-        | awk '!i[$1]++ {print $0}' )"
-    ifn="$( echo "${dev_list}" | awk '$4 ~ /^@/ {print $4}' )"
-    while [ -n "${ifn}" ]; do
-        for ifn in ${ifn}
+        | awk 'NF >= 3 && $3 !~ /^(lo|br-lan)$/ && $3 != "@"$1 && !i[$1]++ {
+            print "echo "$1" "$2" "$3" \"\$( ifstatus_dev "$1" "l3" )\" \"\$( ifstatus_dev "$1" )\"";
+        }' )" )"
+    local MAX_NUM="$( echo "${dev_list}" | wc -l )" count="0" \
+        xcount="$( echo "${dev_list}" | awk -v count="0" '$5 == "Error" {count++;} END{print count;}' )" ycount="0"
+    while [ "${xcount}" -gt "0" ]; do
+        for ifn in $( echo "${dev_list}" | awk 'NF == 5 && $3 ~ /^@/ && $5 == "Error" {wan = $3; sub(/^@/, "", wan); print $1"^"wan;}' )
         do
-            dev_list="$( echo "${dev_list}" | awk -v str="$( echo "${dev_list}" \
-                | awk '$1 == "'"${ifn#*@}"'" {print $4; exit;}' )" '{
-                    if (str == "")
-                        str = "Error";
-                    if ($4 == "'"${ifn}"'")
-                        print $1,$2,$3,str; 
-                    else
-                        print $0;
-                }' )"
+            wan="$( echo "${dev_list}" | awk '$1 == "'"${ifn##*^}"'" {print $5}' )"
+            if [ "${wan}" != "Error" ]; then
+                if [ -z "${wan}" ]; then
+                    dev_list="$( echo "${dev_list}" | awk 'NF == 5 && $1 != "'"${ifn%%^*}"'"' )"
+                else
+                    dev_list="$( echo "${dev_list}" | awk 'NF == 5 {
+                        if ($1 == "'"${ifn%%^*}"'" && $5 == "Error")
+                            print $1,$2,$3,$4,"'"${wan}"'";
+                        else
+                            print $0;
+                        }' )"
+                fi
+            fi
         done
-        ifn="$( echo "${dev_list}" | awk '$4 ~ /^@/ {print $4}' )"
+        xcount="$( echo "${dev_list}" | awk -v count="0" '$5 == "Error" {count++;} END{print count;}' )"
+        if [ "${xcount}" != "${ycount}" ]; then
+            ycount="${xcount}"
+            count="0"
+        else
+            count="$(( count + 1 ))"
+            [ "${count}" -ge "${MAX_NUM}" ] && break
+        fi
     done
-    dev_list="$( eval "$( echo "${dev_list}" | awk '{print "echo "$0" ""\"\$( check_main_rt_dev \""$2"\" \""$4"\" )\"";}' )" \
-        | awk '{wan = $1; if ($5 != "y") wan = wan"->?!"; print wan,$2,$3,$4,$4;}' )"
-    ifn="$( echo "${dev_list}" | awk '$5 ~ /^(pppoe|ppp)[-]/ {print $5}' )"
-    while [ -n "${ifn}" ]; do
-        for ifn in ${ifn}
-        do
-            dev_list="$( echo "${dev_list}" | awk -v str="$( echo "${dev_list}" \
-                | awk '($1 == "'"${ifn#*pppoe-}"'" || $1 == "'"${ifn#*ppp-}"'") {print $5; exit;}' )" '{
-                    if ($5 == "'"${ifn}"'") {
-                        if (str != "")
-                            print $1,$2,$3,$4,str; 
-                    } else
-                        print $0;
-                }' )"
-        done
-        ifn="$( echo "${dev_list}" | awk '$5 ~ /^(pppoe|ppp)[-]/ {print $5}' )"
-    done
-    WAN_DEV_PROPERTY_LIST="$( echo "${dev_list}" | awk '{wan = $1; sub(/->[\?].*$/, "", wan); print wan,$2,$3,$4,$5;}' )"
-    wan_list="$( echo "${dev_list}" | awk '$2 != "dhcpv6"' | awk -v count=0 'NF > 0 && !i[$5]++ {print $1,$5; count++; if (count >= "'"${MAX_WAN_PORT}"'") exit;}' )"
-    for ifn in $( echo "${wan_list}" | awk '{print $2}' )
+    dev_list="$( echo "${dev_list}" | awk 'NF == 5 && $5 != "Error"' )" 
+    WAN_DEV_PROPERTY_LIST="${dev_list}"
+    dev_list="$( echo "${dev_list}" | awk 'NF == 5 {wan = $1; if ($4 == "Error") wan = wan"->?!"; print wan,$2,$3,$4,$5;}' )"
+    wan_list="$( echo "${dev_list}" | awk -v count=0 'NF == 5 && $2 != "dhcpv6" && !i[$5]++ {print $1,$5; count++; if (count >= "'"${MAX_WAN_PORT}"'") exit;}' )"
+    for ifn in $( echo "${wan_list}" | awk 'NF == 2 {print $2}' )
     do
-        wan="$( echo "${dev_list}" | awk 'NF == 5 && $2 == "pppoe" && $5 == "'"${ifn}"'" {print $1; exit;}' )"
-        [ -z "${wan}" ] && wan="$( echo "${dev_list}" | awk 'NF == 5 && $2 == "ppp" && $5 == "'"${ifn}"'" {print $1; exit;}' )"
-        [ -z "${wan}" ] && wan="$( echo "${dev_list}" | awk 'NF == 5 && $2 == "dhcp" && $5 == "'"${ifn}"'" {print $1; exit;}' )"
-        [ -z "${wan}" ] && wan="$( echo "${dev_list}" | awk 'NF == 5 && $2 == "static" && $5 == "'"${ifn}"'" {print $1; exit;}' )"
-        [ -z "${wan}" ] && wan="$( echo "${dev_list}" | awk 'NF == 5 && $2 == "none" && $5 == "'"${ifn}"'" {print $1; exit;}' )"
+        wan="$( echo "${dev_list}" | awk 'NF == 5 && $2 == "pppoe" && $4 != "Error" && $5 == "'"${ifn}"'" {print $1; exit;}' )"
+        [ -z "${wan}" ] && wan="$( echo "${dev_list}" | awk 'NF == 5 && $2 == "ppp" && $4 != "Error" && $5 == "'"${ifn}"'" {print $1; exit;}' )"
+        [ -z "${wan}" ] && wan="$( echo "${dev_list}" | awk 'NF == 5 && $2 == "dhcp" && $4 != "Error" && $5 == "'"${ifn}"'" {print $1; exit;}' )"
+        [ -z "${wan}" ] && wan="$( echo "${dev_list}" | awk 'NF == 5 && $2 == "static" && $4 != "Error" && $5 == "'"${ifn}"'" {print $1; exit;}' )"
+        [ -z "${wan}" ] && wan="$( echo "${dev_list}" | awk 'NF == 5 && $2 == "none" && $4 != "Error" && $5 == "'"${ifn}"'" {print $1; exit;}' )"
+        if [ -z "${wan}" ]; then
+            wan="$( echo "${dev_list}" | awk 'NF == 5 && $2 == "pppoe" && $5 == "'"${ifn}"'" {print $1; exit;}' )"
+            [ -z "${wan}" ] && wan="$( echo "${dev_list}" | awk 'NF == 5 && $2 == "ppp" && $5 == "'"${ifn}"'" {print $1; exit;}' )"
+            [ -z "${wan}" ] && wan="$( echo "${dev_list}" | awk 'NF == 5 && $2 == "dhcp" && $5 == "'"${ifn}"'" {print $1; exit;}' )"
+            [ -z "${wan}" ] && wan="$( echo "${dev_list}" | awk 'NF == 5 && $2 == "static" && $5 == "'"${ifn}"'" {print $1; exit;}' )"
+            [ -z "${wan}" ] && wan="$( echo "${dev_list}" | awk 'NF == 5 && $2 == "none" && $5 == "'"${ifn}"'" {print $1; exit;}' )"
+        fi
         [ -n "${wan}" ] && wan_list="$( echo "${wan_list}" | awk 'NF == 2 {
                 if ($2 == "'"${ifn}"'")
                     print "'"${wan}"'",$2;
@@ -565,10 +575,11 @@ get_wan_dev_list() {
                     print $0;
             }' )"
     done
-    wan_v6_list="$( echo "${dev_list}" | awk '$2 == "dhcpv6"' | awk -v count=0 'NF > 0 && !i[$5]++ {print $1,$5; count++; if (count >= "'"${MAX_WAN_PORT}"'") exit;}' )"
+    wan_v6_list="$( echo "${dev_list}" | awk -v count=0 'NF == 5 && $2 == "dhcpv6" && !i[$5]++ {print $1,$5; count++; if (count >= "'"${MAX_WAN_PORT}"'") exit;}' )"
     for ifn in $( echo "${wan_v6_list}" | awk '{print $2}' )
     do
-        wan="$( echo "${dev_list}" | awk 'NF == 5 && $2 == "dhcpv6" && $5 == "'"${ifn}"'" {print $1; exit;}' )"
+        wan="$( echo "${dev_list}" | awk 'NF == 5 && $2 == "dhcpv6" && $4 != "Error" $5 == "'"${ifn}"'" {print $1; exit;}' )"
+        [ -z "${wan}" ] && wan="$( echo "${dev_list}" | awk 'NF == 5 && $2 == "dhcpv6" && $5 == "'"${ifn}"'" {print $1; exit;}' )"
         [ -n "${wan}" ] && wan_v6_list="$( echo "${wan_v6_list}" | awk 'NF == 2 {
                 if ($2 == "'"${ifn}"'")
                     print "'"${wan}"'",$2;
