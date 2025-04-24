@@ -1,5 +1,5 @@
 #!/bin/sh
-# lzrules.sh v2.1.9
+# lzrules.sh v2.2.0
 # By LZ 妙妙呜 (larsonzhang@gmail.com)
 
 # LZ RULES script for OpenWrt based router
@@ -308,7 +308,7 @@ CUSTOM_V6_IPSETS_LST=""
 DNAME_IPSETS_LST=""
 
 # 版本号
-LZ_VERSION=v2.1.9
+LZ_VERSION=v2.2.0
 
 # 项目标识
 PROJECT_ID="lzrules"
@@ -498,7 +498,7 @@ ifstatus_dev() {
         | awk -v count="0" '$1 == "\"""'"${l3}"'""\":" {
             count++;
             ifn = $2;
-            gsub(/[^[:alnum:]]/, "", ifn);
+            gsub(/[[:space:]\"\,]/, "", ifn);
             if (ifn != "")
                 print ifn;
             else
